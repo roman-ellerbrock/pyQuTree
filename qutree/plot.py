@@ -5,6 +5,7 @@ import random
 import numpy as np
 import matplotlib.pyplot as plt
 from qutree.ttn.grid import *
+import pandas as pd
 
 def plot_xyz(xyz, f, ranges = None):
     # Create a 3D scatter plot with colors based on f_values
@@ -67,6 +68,17 @@ def plot_tn_xyz(tn, fun, q_to_x = None):
         grid = grid.transform(q_to_x)
     fig = plot_xyz(grid, grid.evaluate(fun))
     fig.show()
+
+def tn_to_df(tn, fun):
+    # collect grids
+    gs = nx.get_node_attributes(tn, 'grid')
+    gs = list(gs.values()) # dict to list
+    xyz, f, node = [], [], []
+    for id, grid in enumerate(gs):
+        for i, point in enumerate(grid.grid):
+            xyz.append(point)
+            node.append(id)
+    return pd.DataFrame({'xyz': xyz, 'node': node})
 
 def plot_tree(G, draw_ranks = True):
     G = add_layer_index(G)
