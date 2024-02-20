@@ -80,6 +80,22 @@ def children(G, node):
     in_edges = G.in_edges(node)
     return [e[0] for e in in_edges if e[0] < node]
 
+def _depth_first(G, node, parent = None, sweep = []):
+    childs = children(G, node)
+    for child in childs:
+        if child < 0:
+            continue
+        sweep.append((node, child))
+        _depth_first(G, child, node, sweep)
+    if parent is not None:
+        sweep.append((node, parent))
+
+def depth_first(G):
+    rt = root(G)
+    sweep = []
+    _depth_first(G, rt, None, sweep)
+    return sweep
+
 """
 Tensor Networks
 """
@@ -130,6 +146,14 @@ def permute_to_back(edges, edge):
     edges.append(edge)
     return edges
 
+def back_permutation(edges, edge):
+    pos = edges.index(edge)
+    idx = list(range(len(edges)))
+    idx.pop(pos)
+    idx.append(pos)
+    return idx
+
+
 def add_layer_index(G, root = None):
     if root is None:
         root = max(G.nodes)
@@ -166,6 +190,9 @@ def build_tree(f):
     create edges for a (close-to) balanced tree with f leaves
     """
     nodes = list(range(f))
+    # special case for odd number of leaves
+    if f % 2 == 1:
+        nodes[0] = -1 
     id = f
     edges = []
     while len(nodes) > 1:
@@ -175,10 +202,15 @@ def build_tree(f):
 def balanced_tree(f, r = 2, N = 8):
     """
     Generate a close-to balanced tree tensor network
+    Node: odd f is implemented manually:
+          avoids adding unnecessary node by added code.
+          See # odd-leaf tag
     """
     G = nx.DiGraph()
     id = 0
-    for i in range(f):
+
+    start = f % 2 # special case for odd number of leaves
+    for i in range(start, f):
         edge = (-i - 1, i)
         G.add_edge(edge[0], edge[1])
         G.edges[edge]['sweep_id'] = id
@@ -190,6 +222,8 @@ def balanced_tree(f, r = 2, N = 8):
         id += 1
 
     for edge in reversed(edges):
+        if edge[0] < 0:
+            continue # special case for odd number of leaves
         G.add_edge(edge[1], edge[0])
         G.edges[flip(edge)]['sweep_id'] = id
         id += 1

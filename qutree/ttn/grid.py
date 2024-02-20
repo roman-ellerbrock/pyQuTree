@@ -13,7 +13,7 @@ def linspace(xa = 0., xe = 0., N = 1, include_boundaries = False):
     if include_boundaries:
         return np.linspace(xa, xe, N)
     else:
-        return np.linspace(xa + 0.5 / N, xe - 0.5 / N, N)
+        return np.linspace(xa + (xe - xa) / (2*N), xe - (xe - xa) / (2*N), N)
 
 def _cartesian_product(A, B):
     return np.array([[*a, *b] for a in A for b in B])
@@ -146,4 +146,6 @@ def maxvol_grids(grids, f):
     if mat.shape[0] == mat.shape[1]:
         return grid_L
     rows, _ = maxvol(mat)
-    return grid_L[rows, :]
+
+    return grid_L[rows, :], mat
+

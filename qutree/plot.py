@@ -105,3 +105,32 @@ def plot_tree(G, draw_ranks = True):
     plt.draw()
 
     
+def tngrid_to_df(G, O):
+    # Get node attributes as a dictionary
+    node_attributes = nx.get_node_attributes(G, 'grid')
+    node_attributes = {k: v.grid for k, v in node_attributes.items() if v is not None}
+
+    # Convert dictionary to DataFrame
+    df = pd.DataFrame(list(node_attributes.items()), columns=['node', 'grid'])
+
+    # Create a new DataFrame with the exploded values and reset the index
+    df = df.explode('grid').reset_index()
+
+    df['f'] = df['grid'].apply(lambda x: O.Err(x))
+
+    # Remove the 'index' column
+    df = df.drop(columns='index')
+
+    # Convert the 'grid' column into separate columns
+    df[['x{}'.format(i+1) for i in range(len(df['grid'].iloc[0]))]] = df['grid'].apply(pd.Series)
+
+    # Drop the original 'grid' column
+    df.drop(columns='grid', inplace=True)
+    return df
+
+def concat_pandas(dfs):
+    for t, df in enumerate(dfs):
+        df['time'] = t
+    df = pd.concat(dfs).reset_index()
+    df["size"] = 1
+    return df
