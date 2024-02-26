@@ -43,7 +43,11 @@ def maxvol(A, e=1.05, k=100):
     """
     n, r = A.shape
 
-    if n <= r:
+    if n == r:
+        I = list(range(r))
+        return I, A
+
+    if n < r:
         raise ValueError('Input matrix should be "tall"')
 
     P, L, U = lu(A, check_finite=False)

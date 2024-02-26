@@ -2,18 +2,7 @@ import numpy as np
 from .network import *
 from functools import partial
 from ..matrix_factorizations.maxvol import maxvol
-
-def linspace(xa = 0., xe = 0., N = 1, include_boundaries = False):
-    """
-    Returns equidistant grid with N points between xa and xe.
-    Boundary (xa, xe) can be included (include_boundaries = True).
-    Note that, for example, for integration with trapezoidal rule,
-    the boundaries should be excluded.
-    """
-    if include_boundaries:
-        return np.linspace(xa, xe, N)
-    else:
-        return np.linspace(xa + (xe - xa) / (2*N), xe - (xe - xa) / (2*N), N)
+from ..internal_coordinates import *
 
 def _cartesian_product(A, B):
     return np.array([[*a, *b] for a in A for b in B])
@@ -135,17 +124,57 @@ def transform_node_grid(G, q_to_x):
         G.nodes[node]['grid'] = G.nodes[node]['grid'].transform(q_to_x)
     return G
 
-def maxvol_grids(grids, f):
-    grid_L = cartesian_product(grids[:-1])
-    grid_R = grids[-1]
-    grid = grid_L @ grid_R
-    r = grid_R.shape()[0]
+def maxvol_grids(A, G, edge):
+    pre = pre_edges(G, edge, remove_flipped=True)
+    grid_L = collect(G, pre, 'grid')
+    grid_L = cartesian_product(grid_L)
 
-    mat = grid.evaluate(f)
-    mat = mat.reshape([-1, r])
-    if mat.shape[0] == mat.shape[1]:
-        return grid_L
+    mat = A.flatten(edge)
+
     rows, _ = maxvol(mat)
 
-    return grid_L[rows, :], mat
+    # compute cross matrix inverse
+    cross = mat[rows, :]
+    cross_inv = np.linalg.inv(cross + np.eye(cross.shape[0]) * 1e-10)
+    return grid_L[rows, :], cross_inv
+
+class Objective:
+    def __init__(self, Err, linspace, q_to_xyz = lambda x : x):
+        self.Err = Err
+        self.q_to_xyz = q_to_xyz
+        self.linspace = linspace
+
+    def __call__(self, x):
+        q = self.q_to_xyz(x)
+        return self.Err(q)
+    
+#def maxvol_grids(grids, A, p):
+#    B = A.transpose(p)
+#    r = B.shape[-1]
+#    mat = B.reshape([-1, r])
+#
+#    grids_p = [grids[i] for i in p]
+#    grid_L = cartesian_product(grids_p[:-1])
+#    if mat.shape[0] == mat.shape[1]:
+#        return grid_L
+#    rows, _ = maxvol(mat)
+#
+#    # compute cross matrix inverse
+#    cross = mat[rows, :]
+#    cross_inv = np.linalg.inv(cross + np.eye(r) * 1e-10)
+#    return grid_L[rows, :], cross_inv
+
+#def maxvol_grids(grids, f):
+#    grid_L = cartesian_product(grids[:-1])
+#    grid_R = grids[-1]
+#    grid = grid_L @ grid_R
+#    r = grid_R.shape()[0]
+#
+#    mat = grid.evaluate(f)
+#    mat = mat.reshape([-1, r])
+#    if mat.shape[0] == mat.shape[1]:
+#        return grid_L
+#    rows, _ = maxvol(mat)
+#
+#    return grid_L[rows, :], mat
 

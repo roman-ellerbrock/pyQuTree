@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from qutree.ttn.grid import *
 import pandas as pd
+import plotly.express as px
 
 def plot_xyz(xyz, f, ranges = None):
     # Create a 3D scatter plot with colors based on f_values
@@ -122,7 +123,8 @@ def tngrid_to_df(G, O):
     df = df.drop(columns='index')
 
     # Convert the 'grid' column into separate columns
-    df[['x{}'.format(i+1) for i in range(len(df['grid'].iloc[0]))]] = df['grid'].apply(pd.Series)
+    L = len(df['grid'].iloc[0])
+    df[['x{}'.format(i+1) for i in range(L)]] = df['grid'].apply(pd.Series)
 
     # Drop the original 'grid' column
     df.drop(columns='grid', inplace=True)
@@ -134,3 +136,18 @@ def concat_pandas(dfs):
     df = pd.concat(dfs).reset_index()
     df["size"] = 1
     return df
+
+def grid_animation(df):
+    fig = px.scatter_3d(df, x="x1", y="x2", z="x3", animation_frame="time", animation_group="index",
+               size="size", color="f", hover_name="index",
+               size_max=15,
+                width=800, height=600)
+    fig.layout.updatemenus[0].buttons[0].args[1]['frame']['duration'] = 100
+    fig.layout.updatemenus[0].buttons[0].args[1]['transition']['duration'] = 20
+    camera = dict(
+        eye=dict(x=1.5, y=-1.0, z=1.2),  # Set the position of the camera
+        center=dict(x=0, y=0, z=0),       # Set the point the camera is looking at
+        up=dict(x=0, y=0, z=1)            # Set the upward direction of the camera
+    )
+    fig.update_layout(scene_camera=camera)
+    return fig

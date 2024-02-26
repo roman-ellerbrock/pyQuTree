@@ -153,7 +153,6 @@ def back_permutation(edges, edge):
     idx.append(pos)
     return idx
 
-
 def add_layer_index(G, root = None):
     if root is None:
         root = max(G.nodes)
