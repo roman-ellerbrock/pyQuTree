@@ -1,11 +1,10 @@
 
-import plotly.graph_objects as go
 import networkx as nx
-import random
 import numpy as np
 import matplotlib.pyplot as plt
 from qutree.ttn.grid import *
 import pandas as pd
+import plotly.graph_objects as go
 import plotly.express as px
 
 def plot_xyz(xyz, f, ranges = None):
@@ -84,7 +83,7 @@ def tn_to_df(tn, fun):
 def plot_tree(G, draw_ranks = True):
     G = add_layer_index(G)
     nleaves = len(leaves(G))
-    grid = linspace(0, 1, nleaves, include_boundaries=True)
+    grid = np.linspace(0, 1, nleaves)
     pos = {i : (0, 0) for i in sorted(G.nodes)}
     for node in sorted(G.nodes):
         layer = G.nodes[node]["layer"]
@@ -137,9 +136,9 @@ def concat_pandas(dfs):
     df["size"] = 1
     return df
 
-def grid_animation(df):
+def grid_animation(df, color = 'f'):
     fig = px.scatter_3d(df, x="x1", y="x2", z="x3", animation_frame="time", animation_group="index",
-               size="size", color="f", hover_name="index",
+               size="size", color=color, hover_name="index",
                size_max=15,
                 width=800, height=600)
     fig.layout.updatemenus[0].buttons[0].args[1]['frame']['duration'] = 100

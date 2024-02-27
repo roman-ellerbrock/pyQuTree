@@ -40,11 +40,12 @@ def collect(G, edges, key):
     return items
 
 def sweep(G):
-    def custom_sort_key(edge):
-        return G[edge[0]][edge[1]]['sweep_id']
-
-    # Sort edges based on the custom key
-    return sorted(G.edges, key=custom_sort_key)
+    up = sorted(G.edges, key = lambda x: x[0])
+    up = [edge for edge in up if up_edge(edge)]
+    down = reversed(up)
+    down = [edge for edge in down if not is_leaf(edge)]
+    down = [flip(edge) for edge in down]
+    return up + down
 
 def rsweep(G):
     return reversed(sweep(G))
@@ -58,11 +59,6 @@ def leaf_idx(coord):
 
 def get_coordinate(leaf):
     return -leaf[0] - 1
-
-def fill_qutree_network(G):
-    """
-    Fill a qutree network with missing inverse edges.
-    """
 
 def root(G):
     """
@@ -80,25 +76,48 @@ def children(G, node):
     in_edges = G.in_edges(node)
     return [e[0] for e in in_edges if e[0] < node]
 
-def _depth_first(G, node, parent = None, sweep = []):
+def _star_sweep(G, node, parent = None, sweep = []):
     childs = children(G, node)
     for child in childs:
         if child < 0:
             continue
         sweep.append((node, child))
-        _depth_first(G, child, node, sweep)
+        _star_sweep(G, child, node, sweep)
     if parent is not None:
         sweep.append((node, parent))
 
-def depth_first(G):
+def star_sweep(G):
     rt = root(G)
     sweep = []
-    _depth_first(G, rt, None, sweep)
+    _star_sweep(G, rt, None, sweep)
     return sweep
+
+def remove_edge(G, edge):
+    pre = pre_edges(G, edge, remove_flipped=True)
+    v = edge[0]
+    w = edge[1]
+    # redirect edges
+    for e in pre:
+        attr = G.get_edge_data(*e)
+        G.add_edge(e[0], w, **attr)
+        G.remove_edge(*e)
+    G.remove_edge(*edge)
+    G.remove_edge(*flip(edge))
+    G.remove_node(v)
+    return G
 
 """
 Tensor Networks
 """
+
+def add_layer_index(G, root = None):
+    if root is None:
+        root = max(G.nodes)
+    for node in G.nodes:
+        layer = nx.shortest_path_length(G, node, root)
+        G.nodes[node]['layer'] = layer
+    return G
+
 def tt_graph(f, r = 2, N = 8):
     """
     Generate a tensor train network
@@ -111,20 +130,14 @@ def tt_graph(f, r = 2, N = 8):
     add_leaves(G, f)
     for i in range(f):
         G.add_edge(-i - 1, i)
-        G.edges[(-i - 1, i)]['sweep_id'] = uid
-        uid += 1
 
     # normal edges
     for i in range(f - 1):
         G.add_edge(i, i + 1)
-        G.edges[(i, i + 1)]['sweep_id'] = uid
-        uid += 1
 
     # reverse edges
     for i in range(f - 1, 0, -1):
         G.add_edge(i, i - 1)
-        G.edges[(i, i - 1)]['sweep_id'] = uid
-        uid += 1
 
     # add ranks
     for edge in G.edges():
@@ -139,34 +152,10 @@ def tt_graph(f, r = 2, N = 8):
             G[edge[0]][edge[1]]['coordinate'] = get_coordinate(edge)
     return G
 
-def permute_to_back(edges, edge):
-    if (edges[-1] == edge):
-        return edges
-    edges.remove(edge)
-    edges.append(edge)
-    return edges
-
-def back_permutation(edges, edge):
-    pos = edges.index(edge)
-    idx = list(range(len(edges)))
-    idx.pop(pos)
-    idx.append(pos)
-    return idx
-
-def add_layer_index(G, root = None):
-    if root is None:
-        root = max(G.nodes)
-    
-    for node in G.nodes:
-        layer = nx.shortest_path_length(G, node, root)
-        G.nodes[node]['layer'] = layer
-    
-    return G
-
-
 def _combine_nodes(nodes, id, edges):
     """
-    combine nodes from a vector into new nodes
+    Helper function for balanced_tree
+    Combines nodes from a vector into new nodes.
     nodes: list of nodes
     id: new node idx
     nodes: {1, 2, 3, 4} -> {5, 6}
@@ -212,20 +201,15 @@ def balanced_tree(f, r = 2, N = 8):
     for i in range(start, f):
         edge = (-i - 1, i)
         G.add_edge(edge[0], edge[1])
-        G.edges[edge]['sweep_id'] = id
 
     edges = build_tree(f)
     for edge in edges:
         G.add_edge(edge[0], edge[1])
-        G.edges[edge]['sweep_id'] = id
-        id += 1
 
     for edge in reversed(edges):
         if edge[0] < 0:
             continue # special case for odd number of leaves
         G.add_edge(edge[1], edge[0])
-        G.edges[flip(edge)]['sweep_id'] = id
-        id += 1
     
     # add ranks
     for edge in G.edges():

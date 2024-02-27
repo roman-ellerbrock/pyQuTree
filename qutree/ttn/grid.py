@@ -1,8 +1,6 @@
 import numpy as np
 from .network import *
-from functools import partial
 from ..matrix_factorizations.maxvol import maxvol
-from ..internal_coordinates import *
 
 def _cartesian_product(A, B):
     return np.array([[*a, *b] for a in A for b in B])
