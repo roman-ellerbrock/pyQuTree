@@ -11,8 +11,11 @@ def pre_edges(G, edge, remove_flipped = False):
         pre.remove(flip(edge))
     return pre
 
-def is_leaf(edge):
-    return edge[0] < 0
+def is_leaf(edge, G):
+    return G.in_degree(edge[0]) == 0
+
+#def is_leaf(edge):
+#    return edge[0] < 0
 
 def up_edge(edge):
     return edge[0] < edge[1]
@@ -43,11 +46,11 @@ def sweep(G, include_leaves = True):
     up = sorted(G.edges, key = lambda x: x[0])
     up = [edge for edge in up if up_edge(edge)]
     down = reversed(up)
-    down = [edge for edge in down if not is_leaf(edge)]
+    down = [edge for edge in down if not is_leaf(edge, G)]
     down = [flip(edge) for edge in down]
     res = up + down
     if not include_leaves:
-        res = [edge for edge in res if not is_leaf(edge)]
+        res = [edge for edge in res if not is_leaf(edge, G)]
     return res
 
 def rsweep(G):
@@ -143,14 +146,14 @@ def tt_graph(f, r = 2, N = 8):
 
     # add ranks
     for edge in G.edges():
-        if not is_leaf(edge):
+        if not is_leaf(edge, G):
             G.edges[edge]['r'] = r
         else:
             G.edges[edge]['r'] = N
 
     # add random edge entries
     for edge in G.edges():
-        if is_leaf(edge):
+        if is_leaf(edge, G):
             G[edge[0]][edge[1]]['coordinate'] = get_coordinate(edge)
     return G
 
@@ -214,13 +217,13 @@ def balanced_tree(f, r = 2, N = 8):
     
     # add ranks
     for edge in G.edges():
-        if not is_leaf(edge):
+        if not is_leaf(edge, G):
             G.edges[edge]['r'] = r
         else:
             G.edges[edge]['r'] = N
 
     # add coordinate info
     for edge in G.edges():
-        if is_leaf(edge):
+        if is_leaf(edge, G):
             G[edge[0]][edge[1]]['coordinate'] = get_coordinate(edge)
     return G 

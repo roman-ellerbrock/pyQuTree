@@ -1,7 +1,13 @@
 # Byte-compiled / optimized / DLL files
+
+.DS_store
+.venv_qutree
 __pycache__/
 *.py[cod]
 *$py.class
+
+ttnopt.html
+ttnopt_3D.mov
 
 # generated pictures
 *.png

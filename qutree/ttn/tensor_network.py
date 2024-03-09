@@ -10,7 +10,7 @@ class TensorNetwork(nx.DiGraph):
 def ttnopt_step(G, O, dfs = []):
     G = G.copy()
     for edge in star_sweep(G):
-        if is_leaf(edge):
+        if is_leaf(edge, G):
             continue
 
         edges = pre_edges(G, edge)
@@ -79,7 +79,7 @@ def create_tensors(G, generator = np.zeros, key = 'A'):
         G.nodes[node][key] = A
     
     for edge in sweep(G):
-        if (is_leaf(edge)):
+        if (is_leaf(edge, G)):
             continue
         edges = [edge, flip(edge)]
         ranks = collect(G, edges, 'r')

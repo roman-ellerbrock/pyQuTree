@@ -103,7 +103,7 @@ def tn_grid(G, grids):
     grids: list of grids for each coordinate
     """
     for edge in sweep(G):
-        if (is_leaf(edge)):
+        if (is_leaf(edge, G)):
             coord = get_coordinate(edge)
             G[edge[0]][edge[1]]['grid'] = Grid(grids[coord], coord)
         else:
