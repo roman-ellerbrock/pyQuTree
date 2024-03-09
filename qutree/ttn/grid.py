@@ -1,4 +1,5 @@
 import numpy as np
+from .tensor import *
 from .network import *
 from ..matrix_factorizations.maxvol import maxvol
 
@@ -122,6 +123,12 @@ def transform_node_grid(G, q_to_x):
         G.nodes[node]['grid'] = G.nodes[node]['grid'].transform(q_to_x)
     return G
 
+def regularized_inverse(A, lambda_reg):
+    U, sigma, VT = np.linalg.svd(A, full_matrices=False)
+    sigma_inv = np.array([1/s if s/sigma[0] > lambda_reg else lambda_reg for s in sigma])
+    A_inv = VT.T @ np.diag(sigma_inv) @ U.T
+    return A_inv
+
 def maxvol_grids(A, G, edge):
     pre = pre_edges(G, edge, remove_flipped=True)
     grid_L = collect(G, pre, 'grid')
@@ -132,8 +139,8 @@ def maxvol_grids(A, G, edge):
     rows, _ = maxvol(mat)
 
     # compute cross matrix inverse
-    cross = mat[rows, :]
-    cross_inv = np.linalg.inv(cross + np.eye(cross.shape[0]) * 1e-10)
+    cross_inv = regularized_inverse(mat[rows, :], 1e-12)
+    cross_inv = quTensor(cross_inv, [edge, flip(edge)])
     return grid_L[rows, :], cross_inv
 
 class Objective:
@@ -143,8 +150,9 @@ class Objective:
         self.linspace = linspace
 
     def __call__(self, x):
-        q = self.q_to_xyz(x)
-        return self.Err(q)
+        return self.Err(x)
+#        q = self.q_to_xyz(x)
+#        return self.Err(q)
     
 #def maxvol_grids(grids, A, p):
 #    B = A.transpose(p)

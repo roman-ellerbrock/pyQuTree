@@ -39,13 +39,16 @@ def collect(G, edges, key):
         items.append(G.edges[e][key])
     return items
 
-def sweep(G):
+def sweep(G, include_leaves = True):
     up = sorted(G.edges, key = lambda x: x[0])
     up = [edge for edge in up if up_edge(edge)]
     down = reversed(up)
     down = [edge for edge in down if not is_leaf(edge)]
     down = [flip(edge) for edge in down]
-    return up + down
+    res = up + down
+    if not include_leaves:
+        res = [edge for edge in res if not is_leaf(edge)]
+    return res
 
 def rsweep(G):
     return reversed(sweep(G))
@@ -125,7 +128,6 @@ def tt_graph(f, r = 2, N = 8):
     G = nx.DiGraph()
     G.add_nodes_from(range(f))
 
-    uid = 0
     # leaf edges
     add_leaves(G, f)
     for i in range(f):
@@ -195,7 +197,6 @@ def balanced_tree(f, r = 2, N = 8):
           See # odd-leaf tag
     """
     G = nx.DiGraph()
-    id = 0
 
     start = f % 2 # special case for odd number of leaves
     for i in range(start, f):

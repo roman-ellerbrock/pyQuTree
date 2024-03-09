@@ -25,6 +25,14 @@ class quTensor(np.ndarray):
         edges_p = [self.edges[i] for i in p]
         edges = [edges_p[:-1], edge]
         return quTensor(A.reshape((-1, s[-1])), edges)
+    
+    def transpose(self, axes = None):
+        if axes is None:
+            axes = list(range(len(self.shape)))
+            axes = axes[::-1]
+        edges = [self.edges[i] for i in axes]
+        A = super().transpose(axes)
+        return quTensor(A, edges)
 
 def tensordot(A, B, edge):
     e = tuple(sorted(edge))
@@ -34,12 +42,13 @@ def tensordot(A, B, edge):
     edges_a.remove(e)
     edges_b = B.edges.copy()
     edges_b.remove(e)
-    print(edges_a, edges_b)
+#    print(edges_a, edges_b)
     edges_c = edges_a + edges_b
     for i, ex in enumerate(edges_c):
         if (ex[1] == e[0]):
-            print('swapping', ex, ', new edge: ', (ex[0], e[1]))
+#            print('swapping', ex, ', new edge: ', (ex[0], e[1]))
             edges_c[i] = (ex[0], e[1])
     edges_c = [tuple(sorted(edge)) for edge in edges_c]
+#    print(iA, iB)
 
     return quTensor(np.tensordot(A, B, axes = (iA, iB)), edges_c)
