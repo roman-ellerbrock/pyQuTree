@@ -30,6 +30,7 @@ def test_ttopt_contract():
     G = balanced_tree(2, r, N)
     G = tn_grid(G, O.linspace)
     Gopt, _ = ttnopt(G, O, nsweep = 5)
+
     F = contract(Gopt)
     F2 = F.nodes[2]['A']
     
@@ -38,6 +39,27 @@ def test_ttopt_contract():
     xyz = x1 @ x2
     Fref = xyz.evaluate(func)
     Fref = Fref.reshape((N, N))
-    if F2.edges[0][0] == -2:
-        F2 = np.transpose(F2, (1, 0))
-    assert (np.linalg.norm(Fref - F2)/np.linalg.norm(F2)) < 1e-12
+    assert (np.linalg.norm(Fref - F2)/np.linalg.norm(Fref)) < 1e-12
+
+
+def test_ttopt_contract():
+    def f_sin(x):
+        y = x * np.pi
+        return np.cos(y[0]) * np.sin(y[1])
+    
+    r = 2
+    N = 20
+    func = f_sin
+    O = Objective(func, [linspace(-1, 1, N)] * 2)
+    G = balanced_tree(2, r, N)
+    G = tn_grid(G, O.linspace)
+    Gopt, _ = ttnopt(G, O, nsweep = 5)
+
+    F = extract_root_tensor(contract(Gopt))
+    
+    x1 = Grid(linspace(-1, 1, N), 0)
+    x2 = Grid(linspace(-1, 1, N), 1)
+    xyz = x1 @ x2
+    Fref = xyz.evaluate(func)
+    assert (np.linalg.norm(Fref - F)/np.linalg.norm(Fref)) < 1e-12
+

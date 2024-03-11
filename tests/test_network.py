@@ -23,8 +23,8 @@ def test_start_sweep():
 
 def test_sweep():
     tn = balanced_tree(3, 2, 10)
-    print(sweep(tn))
-    expected = [(-3, 2), (-2, 1), (-1, 4), (1, 3), (2, 3), (3, 4), (4, 3), (3, 2), (3, 1)]
+#    expected = [(-3, 2), (-2, 1), (-1, 4), (1, 3), (2, 3), (3, 4), (4, 3), (3, 2), (3, 1)]
+    expected = [(-2, 1), (-3, 2), (1, 3), (2, 3), (3, 4), (-1, 4), (4, -1), (4, 3), (3, 1), (3, 2), (1, -2), (2, -3)]
     assert sweep(tn) == expected
 
 def test_pre_edges():
@@ -42,8 +42,8 @@ def test_remove_edge():
     assert (3, 4) not in G.edges
     assert (4, 3) not in G.edges
     assert 3 not in G.nodes
-    expect = sorted(((-1, 4), (1, 4), (2, 4), (-2, 1), (-3, 2)))
-    assert sorted(G.edges) == expect
+    expected = [(-3, 2), (-2, 1), (-1, 4), (1, -2), (1, 4), (2, -3), (2, 4), (4, -1)]
+    assert sorted(G.edges) == expected
 
 #def test_qutensor():
 #    e1 = [(-3, 2), (3, 2)]

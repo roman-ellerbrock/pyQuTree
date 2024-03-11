@@ -82,7 +82,7 @@ def tn_to_df(tn, fun):
 
 def plot_tree(G, draw_ranks = True):
     G = add_layer_index(G)
-    nleaves = len(leaves(G))
+    nleaves = len(up_leaves(G))
     grid = np.linspace(0, 1, nleaves)
     pos = {i : (0, 0) for i in sorted(G.nodes)}
     for node in sorted(G.nodes):
@@ -140,9 +140,18 @@ def grid_animation(df, color = 'f'):
     fig = px.scatter_3d(df, x="x1", y="x2", z="x3", animation_frame="time", animation_group="index",
                size="size", color=color, hover_name="index",
                size_max=15,
-                width=800, height=600)
+                width=1000, height=800)
     fig.layout.updatemenus[0].buttons[0].args[1]['frame']['duration'] = 100
     fig.layout.updatemenus[0].buttons[0].args[1]['transition']['duration'] = 20
+    fig.update_layout(scene=dict(
+        xaxis_title="x",
+        yaxis_title="y",
+        zaxis_title="z",
+        xaxis=dict(showticklabels=False),
+        yaxis=dict(showticklabels=False),
+        zaxis=dict(showticklabels=False),
+    ))
+
     camera = dict(
         eye=dict(x=1.5, y=-1.0, z=1.2),  # Set the position of the camera
         center=dict(x=0, y=0, z=0),       # Set the point the camera is looking at

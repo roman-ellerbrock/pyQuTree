@@ -89,12 +89,34 @@ def direct_sum(grids):
 
 def build_node_grid(G):
     for node in G.nodes:
-        if node < 0:
+        if is_leaf_node(node, G):
             continue
         edges = G.in_edges(node)
         pre_grids = collect(G, edges, 'grid')
         grid = cartesian_product(pre_grids).permute()
         G.nodes[node]['grid'] = grid
+
+#def tn_grid(G, grids):
+#    """
+#    Initialize a random tn grid
+#    G: tensor network
+#    grids: list of grids for each coordinate
+#    """
+#    for edge in sweep(G):
+#        if (is_leaf(edge, G)):
+#            coord = G.edges[edge]['coordinate']
+#            G.edges[edge]['grid'] = Grid(grids[coord], coord)
+#        else:
+#            r = G.edges[edge]['r']
+#            print(edge)
+#            pre = pre_edges(G, edge, remove_flipped=True)
+#            print(pre)
+#            pre_grids = collect(G, pre, 'grid')
+#            next_grid = cartesian_product(pre_grids).random_subset(r)
+#            G.edges[edge]['grid'] = next_grid
+#
+#    build_node_grid(G)
+#    return G
 
 def tn_grid(G, grids):
     """
@@ -102,16 +124,19 @@ def tn_grid(G, grids):
     G: tensor network
     grids: list of grids for each coordinate
     """
-    for edge in sweep(G):
-        if (is_leaf(edge, G)):
-            coord = get_coordinate(edge)
-            G[edge[0]][edge[1]]['grid'] = Grid(grids[coord], coord)
-        else:
-            r = G.edges[edge]['r']
-            pre = pre_edges(G, edge, remove_flipped=True)
-            pre_grids = collect(G, pre, 'grid')
-            next_grid = cartesian_product(pre_grids).random_subset(r)
-            G[edge[0]][edge[1]]['grid'] = next_grid
+
+    coord = 0
+    for leaf in sorted(up_leaves(G)):
+        G.edges[leaf]['coordinate'] = coord
+        G.edges[leaf]['grid'] = Grid(grids[coord], coord)
+        coord += 1
+
+    for edge in sweep(G, False):
+        r = G.edges[edge]['r']
+        pre = pre_edges(G, edge, remove_flipped=True)
+        pre_grids = collect(G, pre, 'grid')
+        next_grid = cartesian_product(pre_grids).random_subset(r)
+        G.edges[edge]['grid'] = next_grid
 
     build_node_grid(G)
     return G

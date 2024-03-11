@@ -22,9 +22,9 @@ def ttnopt_step(G, O, dfs = []):
         next, cross_inv = maxvol_grids(A, G, edge)
 
         # save results
+        G.edges[edge]['grid'] = next
+        G.edges[edge]['A'] = cross_inv
         G.nodes[edge[0]]['grid'] = grid
-        G[edge[0]][edge[1]]['grid'] = next
-        G[edge[0]][edge[1]]['A'] = cross_inv
         G.nodes[edge[0]]['A'] = A
 
         # update dfs
@@ -91,7 +91,7 @@ def contract(G, contraction_path = None):
     # construct a default contraction path for a bottom-up sweep
     if contraction_path is None:
         contraction_path = sweep(G, include_leaves=False)
-        contraction_path = [edge for edge in contraction_path if edge[0] < edge[1]]
+        contraction_path = [edge for edge in contraction_path if up_edge(edge, G)]
 
     for edge in contraction_path:
         a, b = edge
@@ -103,17 +103,28 @@ def contract(G, contraction_path = None):
         G = remove_edge(G, (a, b))
     return G
 
-def tn_to_tensor(G):
+def extract_root_tensor(G):
     """
     Small helper function that allows to extract a single-tensor from a tn
     after contraction
     """
-    F = contract(G)
-    leaves = G.nodes
-    leaves = [node for node in leaves if node < 0]
-    n_leaves = len(leaves)
-    node_id = max(G.nodes)
-    F = F.nodes[node_id]['A']
-    p = list(range(n_leaves - 1, -1, -1))
-    F = np.transpose(F, p).reshape(-1)
-    return F
+    return G.nodes[root(G)]['A'].reshape(-1)
+
+def tn_to_tensor(G):
+    return extract_root_tensor(contract(G))
+
+#def tn_to_tensor(G):
+#    """
+#    Small helper function that allows to extract a single-tensor from a tn
+#    after contraction
+#    """
+#    F = contract(G)
+#    leaves = G.nodes
+#    leaves = [node for node in leaves if node < 0]
+#    n_leaves = len(leaves)
+#    node_id = max(G.nodes)
+#    F = F.nodes[node_id]['A']
+#    p = list(range(n_leaves - 1, -1, -1))
+#    F = np.transpose(F, p).reshape(-1)
+#    return F
+#

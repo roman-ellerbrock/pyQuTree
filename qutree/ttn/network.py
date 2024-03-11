@@ -12,13 +12,16 @@ def pre_edges(G, edge, remove_flipped = False):
     return pre
 
 def is_leaf(edge, G):
-    return G.in_degree(edge[0]) == 0
+    return G.in_degree(edge[0]) <= 1 or G.in_degree(edge[1]) <= 1
+#    return G.in_degree(edge[0]) == 0 or G.in_degree(edge[1]) == 0 # works only if leaves are added as (-i - 1, i) but not reverse
 
-#def is_leaf(edge):
-#    return edge[0] < 0
+def is_leaf_node(node, G):
+    return G.in_degree(node) <= 1 or G.in_degree(node) <= 1
 
-def up_edge(edge):
-    return edge[0] < edge[1]
+def up_edge(edge, G):
+    d0 = nx.shortest_path_length(G, source=edge[0], target=root(G))
+    d1 = nx.shortest_path_length(G, source=edge[1], target=root(G))
+    return d0 > d1
 
 def flip(edge):
     return (edge[1], edge[0])
@@ -42,41 +45,54 @@ def collect(G, edges, key):
         items.append(G.edges[e][key])
     return items
 
+def up_edges_by_distance_to_root(G, root):
+    distance = nx.shortest_path_length(G, source=root)
+
+    up_edges = [edge for edge in G.edges() if distance[edge[0]] > distance[edge[1]]]
+    down_edges = [edge for edge in G.edges() if distance[edge[0]] < distance[edge[1]]]
+
+    sorted_up_edges = sorted(up_edges, key=lambda edge: -distance[edge[1]])
+    sorted_down_edges = sorted(down_edges, key=lambda edge: distance[edge[1]])
+    return sorted_up_edges, sorted_down_edges
+
 def sweep(G, include_leaves = True):
-    up = sorted(G.edges, key = lambda x: x[0])
-    up = [edge for edge in up if up_edge(edge)]
-    down = reversed(up)
-    down = [edge for edge in down if not is_leaf(edge, G)]
-    down = [flip(edge) for edge in down]
-    res = up + down
+    up, down = up_edges_by_distance_to_root(G, root(G))
+    sw = up + down
     if not include_leaves:
-        res = [edge for edge in res if not is_leaf(edge, G)]
-    return res
+        sw = [edge for edge in sw if not is_leaf(edge, G)]
+    return sw
+
+#def sweep(G, include_leaves = True):
+#    up = sorted(G.edges, key = lambda x: x[0])
+#    up = [edge for edge in up if up_edge(edge)]
+#    down = reversed(up)
+#    down = [edge for edge in down if not is_leaf(edge, G)]
+#    down = [flip(edge) for edge in down]
+#    res = up + down
+#    if not include_leaves:
+#        res = [edge for edge in res if not is_leaf(edge, G)]
+#    return res
 
 def rsweep(G):
     return reversed(sweep(G))
 
 def add_leaves(G, f):
     for i in range(f):
+        G.add_edge(i, -i - 1)
         G.add_edge(-i - 1, i)
-
-def leaf_idx(coord):
-    return -coord - 1
-
-def get_coordinate(leaf):
-    return -leaf[0] - 1
 
 def root(G):
     """
     Return the root of a tree
     """
+    # @todo: remove dependency of node indexing. Maybe at least use '0' as root
     return max(G.nodes)
 
-def leaves(G):
+def up_leaves(G):
     """
     Return the leaves of a tree
     """
-    return [node for node in G.nodes if node < 0]
+    return [edge for edge in G.edges if is_leaf(edge, G) and up_edge(edge, G)]
 
 def children(G, node):
     in_edges = G.in_edges(node)
@@ -152,9 +168,11 @@ def tt_graph(f, r = 2, N = 8):
             G.edges[edge]['r'] = N
 
     # add random edge entries
+    coord = 0
     for edge in G.edges():
         if is_leaf(edge, G):
-            G[edge[0]][edge[1]]['coordinate'] = get_coordinate(edge)
+            G.edges[edge]['coordinate'] = coord
+            coord += 1
     return G
 
 def _combine_nodes(nodes, id, edges):
@@ -205,14 +223,15 @@ def balanced_tree(f, r = 2, N = 8):
     for i in range(start, f):
         edge = (-i - 1, i)
         G.add_edge(edge[0], edge[1])
+        G.add_edge(edge[1], edge[0])
 
     edges = build_tree(f)
     for edge in edges:
         G.add_edge(edge[0], edge[1])
 
     for edge in reversed(edges):
-        if edge[0] < 0:
-            continue # special case for odd number of leaves
+#        if edge[0] < 0:
+#            continue # special case for odd number of leaves
         G.add_edge(edge[1], edge[0])
     
     # add ranks
@@ -222,8 +241,4 @@ def balanced_tree(f, r = 2, N = 8):
         else:
             G.edges[edge]['r'] = N
 
-    # add coordinate info
-    for edge in G.edges():
-        if is_leaf(edge, G):
-            G[edge[0]][edge[1]]['coordinate'] = get_coordinate(edge)
     return G 
