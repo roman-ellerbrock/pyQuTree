@@ -62,6 +62,14 @@ def sweep(G, include_leaves = True):
         sw = [edge for edge in sw if not is_leaf(edge, G)]
     return sw
 
+def up_sweep(G, include_leaves = True):
+    # @todo: add unit test
+    up, _ = up_edges_by_distance_to_root(G, root(G))
+    sw = up
+    if not include_leaves:
+        sw = [edge for edge in sw if not is_leaf(edge, G)]
+    return sw
+
 #def sweep(G, include_leaves = True):
 #    up = sorted(G.edges, key = lambda x: x[0])
 #    up = [edge for edge in up if up_edge(edge)]
@@ -140,7 +148,7 @@ def add_layer_index(G, root = None):
         G.nodes[node]['layer'] = layer
     return G
 
-def tt_graph(f, r = 2, N = 8):
+def tensor_train_graph(f, r = 2, N = 8):
     """
     Generate a tensor train network
     """
@@ -149,8 +157,6 @@ def tt_graph(f, r = 2, N = 8):
 
     # leaf edges
     add_leaves(G, f)
-    for i in range(f):
-        G.add_edge(-i - 1, i)
 
     # normal edges
     for i in range(f - 1):
@@ -171,6 +177,47 @@ def tt_graph(f, r = 2, N = 8):
     coord = 0
     for edge in G.edges():
         if is_leaf(edge, G):
+            G.edges[edge]['coordinate'] = coord
+            coord += 1
+    return G
+
+def tensor_train_operator_graph(f, r = 2, N = 8):
+    """
+    Generate a tensor train network
+    """
+    G = nx.DiGraph()
+    G.add_nodes_from(range(f))
+
+    # leaf edges
+    for i in range(0, f):
+        node = i
+        x = -2*i - 1
+        y = -2*i - 2
+        G.add_edge(node, x)
+        G.add_edge(x, node)
+        G.add_edge(node, y)
+        G.add_edge(y, node)
+
+
+    # normal edges
+    for i in range(f - 1):
+        G.add_edge(i, i + 1)
+
+    # reverse edges
+    for i in range(f - 1, 0, -1):
+        G.add_edge(i, i - 1)
+
+    # add ranks
+    for edge in G.edges():
+        if not is_leaf(edge, G):
+            G.edges[edge]['r'] = r
+        else:
+            G.edges[edge]['r'] = N
+
+    # add random edge entries
+    coord = 0
+    for edge in G.edges():
+        if is_leaf(edge, G) and up_edge(edge, G):
             G.edges[edge]['coordinate'] = coord
             coord += 1
     return G
