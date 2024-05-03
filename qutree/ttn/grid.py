@@ -61,8 +61,8 @@ class Grid:
         grid = self.grid[idx]
         return Grid(grid, self.coords)
     
-    def evaluate(self, func):
-        return np.apply_along_axis(func, 1, self.grid)
+    def evaluate(self, func, **kwargs):
+        return np.apply_along_axis(func, 1, self.grid, **kwargs)
     
     def transform(self, func):
         return Grid(np.apply_along_axis(func, 1, self.grid), self.coords)
@@ -95,28 +95,6 @@ def build_node_grid(G):
         pre_grids = collect(G, edges, 'grid')
         grid = cartesian_product(pre_grids).permute()
         G.nodes[node]['grid'] = grid
-
-#def tn_grid(G, grids):
-#    """
-#    Initialize a random tn grid
-#    G: tensor network
-#    grids: list of grids for each coordinate
-#    """
-#    for edge in sweep(G):
-#        if (is_leaf(edge, G)):
-#            coord = G.edges[edge]['coordinate']
-#            G.edges[edge]['grid'] = Grid(grids[coord], coord)
-#        else:
-#            r = G.edges[edge]['r']
-#            print(edge)
-#            pre = pre_edges(G, edge, remove_flipped=True)
-#            print(pre)
-#            pre_grids = collect(G, pre, 'grid')
-#            next_grid = cartesian_product(pre_grids).random_subset(r)
-#            G.edges[edge]['grid'] = next_grid
-#
-#    build_node_grid(G)
-#    return G
 
 def tn_grid(G, grids):
     """
@@ -167,45 +145,3 @@ def maxvol_grids(A, G, edge):
     cross_inv = regularized_inverse(mat[rows, :], 1e-12)
     cross_inv = quTensor(cross_inv, [edge, flip(edge)])
     return grid_L[rows, :], cross_inv
-
-class Objective:
-    def __init__(self, Err, linspace, q_to_xyz = lambda x : x):
-        self.Err = Err
-        self.q_to_xyz = q_to_xyz
-        self.linspace = linspace
-
-    def __call__(self, x):
-        return self.Err(x)
-#        q = self.q_to_xyz(x)
-#        return self.Err(q)
-    
-#def maxvol_grids(grids, A, p):
-#    B = A.transpose(p)
-#    r = B.shape[-1]
-#    mat = B.reshape([-1, r])
-#
-#    grids_p = [grids[i] for i in p]
-#    grid_L = cartesian_product(grids_p[:-1])
-#    if mat.shape[0] == mat.shape[1]:
-#        return grid_L
-#    rows, _ = maxvol(mat)
-#
-#    # compute cross matrix inverse
-#    cross = mat[rows, :]
-#    cross_inv = np.linalg.inv(cross + np.eye(r) * 1e-10)
-#    return grid_L[rows, :], cross_inv
-
-#def maxvol_grids(grids, f):
-#    grid_L = cartesian_product(grids[:-1])
-#    grid_R = grids[-1]
-#    grid = grid_L @ grid_R
-#    r = grid_R.shape()[0]
-#
-#    mat = grid.evaluate(f)
-#    mat = mat.reshape([-1, r])
-#    if mat.shape[0] == mat.shape[1]:
-#        return grid_L
-#    rows, _ = maxvol(mat)
-#
-#    return grid_L[rows, :], mat
-

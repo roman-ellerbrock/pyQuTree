@@ -11,6 +11,9 @@ ttnopt_3D.mov
 
 # generated pictures
 *.png
+*.gif
+
+*.csv
 
 # C extensions
 *.so

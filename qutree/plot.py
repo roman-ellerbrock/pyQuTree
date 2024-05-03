@@ -6,6 +6,8 @@ from qutree.ttn.grid import *
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
+import imageio
+import os
 
 def plot_xyz(xyz, f, ranges = None):
     # Create a 3D scatter plot with colors based on f_values
@@ -45,18 +47,21 @@ def plot_xyz(xyz, f, ranges = None):
             margin=dict(l=0, r=0, b=0, t=0)
         )
 
-
     # Show the plot
     return fig
 
-def plot_tt_diagram(tn):
-    pos0 = [np.array([-(-i - 1), 0.1]) for i in range(-5, 0)]
-    pos1 = [np.array([-i, 0]) for i in range(5)]
+def plot_tt_diagram(tn, draw_ranks = True):
+    nleaves = len(up_leaves(tn))
+    pos0 = [np.array([-(-i - 1), 0.1]) for i in range(-nleaves, 0)]
+    pos1 = [np.array([-i, 0]) for i in range(nleaves)]
     pos12 = pos0 + pos1
-    pos = {i: pos12[i] for i in range(-5, 5)}
-    nx.draw(tn, pos = pos, with_labels=True, node_size = 500)
-    plt.draw() 
+    pos = {i: pos12[i] for i in range(-nleaves, nleaves)}
+#    plt.draw() 
     plt.gca().set_aspect(15)  # 'equal' ensures that one unit in x is equal to one unit in y
+    nx.draw(tn, pos = pos, with_labels=False, node_size = 250, font_size = 8)
+    if draw_ranks:
+        ranks = nx.get_edge_attributes(tn, 'r')
+        nx.draw_networkx_edge_labels(tn, pos, edge_labels=ranks, font_size=14)
 #    plt.subplots_adjust(left=0.1, right=0.9, bottom=10.1, top=20.9)
 
 def plot_tn_xyz(tn, fun, q_to_x = None):
@@ -98,10 +103,10 @@ def plot_tree(G, draw_ranks = True):
             x = np.mean(children_pos, axis=0)
         pos[node] = (x, y)
     
-    nx.draw(G, pos = pos, with_labels=True, node_size = 500)
+    nx.draw(G, pos = pos, with_labels=False, node_size = 500)
     if draw_ranks:
         ranks = nx.get_edge_attributes(G, 'r')
-        nx.draw_networkx_edge_labels(G, pos, edge_labels=ranks)
+        nx.draw_networkx_edge_labels(G, pos, edge_labels=ranks, font_size = 18)
     plt.draw()
 
     
@@ -137,8 +142,8 @@ def concat_pandas(dfs):
     return df
 
 def grid_animation(df, color = 'f'):
-    fig = px.scatter_3d(df, x="x1", y="x2", z="x3", animation_frame="time", animation_group="index",
-               size="size", color=color, hover_name="index",
+    fig = px.scatter_3d(df, x="x1", y="x2", z="x3", animation_frame="time", animation_group="node",
+               size="size", color=color, hover_name="time",
                size_max=15,
                 width=1000, height=800)
     fig.layout.updatemenus[0].buttons[0].args[1]['frame']['duration'] = 100
@@ -159,3 +164,38 @@ def grid_animation(df, color = 'f'):
     )
     fig.update_layout(scene_camera=camera)
     return fig
+
+def grid_animation_to_gif(df, color='f', gif_filename='animation.gif', frames_folder = '.frames'):
+    os.makedirs(frames_folder, exist_ok=True)
+    unique_times = df['time'].unique()
+    unique_times = unique_times[2:35]
+    for time in unique_times:
+        sub_df = df[df['time'] == time]
+
+        # Generate the plot
+        fig = px.scatter_3d(sub_df, x="x1", y="x2", z="x3", color=color, size_max=10, width=1000, height=800)
+        fig.update_layout(scene=dict(xaxis_title="x", yaxis_title="y", zaxis_title="z",
+                                     xaxis=dict(showticklabels=False),
+                                     yaxis=dict(showticklabels=False),
+                                     zaxis=dict(showticklabels=False)))
+        camera = dict(
+            eye=dict(x=1.5, y=-1.0, z=1.2),  # Set the position of the camera
+            center=dict(x=0, y=0, z=0),       # Set the point the camera is looking at
+            up=dict(x=0, y=0, z=1)            # Set the upward direction of the camera
+        )
+        
+        # Adjust transparency settings if needed
+        fig.update_traces(marker=dict(opacity=0.75, size = 6))  # Adjust opacity here
+        fig.update_layout(scene_camera=camera)
+        fig.write_image(os.path.join(frames_folder, f'frame_{time:04d}.png'), format = 'png')
+
+    # Generate GIF
+    images = [imageio.imread(os.path.join(frames_folder, f'frame_{i:04d}.png')) for i in unique_times]
+    imageio.mimsave(gif_filename, images, fps=10)  # Adjust fps as needed
+
+    # Cleanup images
+    for filename in os.listdir(frames_folder):
+        os.remove(os.path.join(frames_folder, filename))
+    os.rmdir(frames_folder)
+
+    return gif_filename

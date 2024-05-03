@@ -1,5 +1,6 @@
 from qutree.ttn.tensor_network import *
 from qutree.internal_coordinates import *
+from qutree.ttn.ttnopt import *
 
 def test_contraction():
     N = 10
@@ -26,9 +27,9 @@ def test_ttopt_contract():
     r = 2
     N = 20
     func = f_sin
-    O = Objective(func, [linspace(-1, 1, N)] * 2)
+    O = Objective(func)
     G = balanced_tree(2, r, N)
-    G = tn_grid(G, O.linspace)
+    G = tn_grid(G, [linspace(-1, 1, N)] * 2)
     Gopt, _ = ttnopt(G, O, nsweep = 5)
 
     F = contract(Gopt)
@@ -50,9 +51,9 @@ def test_ttopt_contract():
     r = 2
     N = 20
     func = f_sin
-    O = Objective(func, [linspace(-1, 1, N)] * 2)
+    O = Objective(func)
     G = balanced_tree(2, r, N)
-    G = tn_grid(G, O.linspace)
+    G = tn_grid(G, [linspace(-1, 1, N)] * 2)
     Gopt, _ = ttnopt(G, O, nsweep = 5)
 
     F = extract_root_tensor(contract(Gopt))

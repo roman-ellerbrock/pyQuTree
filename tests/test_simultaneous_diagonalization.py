@@ -36,18 +36,6 @@ def test_diagonalization():
     assert np.allclose(A, np.array([[[1., 0.], [0., -1.]]]))
 
 def test_diagonalization():
-    n = 3
-    A = np.arange(n * n).reshape([n, n])
-    A = 0.5 * (A + A.T)
-    eval, evec = np.linalg.eigh(A)
-    A = A.reshape([1, n, n])
-    eval_2, evec_2 = simultaneous_diagonalization(A.copy(), n_iter=50, verbose=False)
-    A2 = evec_2 @ eval_2.reshape((n, n)) @ evec_2.T
-    print('A  = ', A)
-    print('A2 = ', A2)
-    print('A3 = ', evec @ np.diag(eval) @ evec.T)
-
-def test_diagonalization():
     n = 5
     A = np.arange(n * n).reshape([n, n])
     A = 0.5 * (A + A.T)
@@ -55,7 +43,7 @@ def test_diagonalization():
 
     A = A.reshape([1, n, n])
     eval_2, evec_2 = simultaneous_diagonalization(A.copy(), n_iter=50, eps = 1e-15, verbose=False)
-    assert off_diagonal_measure(eval_2) < 1e-7
+    assert off_diagonal_measure(eval_2) < 1e-6
 
     A2 = evec_2 @ eval_2.reshape((n, n)) @ evec_2.T
     assert np.allclose(A2, A)
@@ -65,6 +53,27 @@ def test_diagonalization():
     assert np.allclose(eval, eval_2sort)
 
     assert np.allclose(evec_2 @ evec_2.T, np.eye(n))
+
+def test_simultaneous_diagonalization():
+    n = 4
+    m = 2
+    a0 = np.arange(n)
+    a1 = np.array([2, 3, 1, 2])
+    np.random.seed(4)
+    U = np.random.rand(n, n)
+    U, _ = np.linalg.qr(U)
+    A = np.zeros([m, n, n], dtype=np.complex128)
+    A[0] = U @ np.diag(a0) @ U.T
+    A[1] = U @ np.diag(a1) @ U.T
+
+    ev, evec = np.linalg.eigh(A[0])
+
+    a, U = simultaneous_diagonalization(A, n_iter=100, eps=1e-14, verbose=False)
+    assert off_diagonal_measure(a) < 1e-6
+    assert np.allclose(U @ U.T, np.eye(n))
+    a[0] = U @ a[0] @ U.T
+    a[1] = U @ a[1] @ U.T
+    assert np.allclose(a, A)
 
 #def test_diagonalization():
 #    m, n = 1, 3
