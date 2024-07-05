@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyQuTree"
+version = "0.1.0"
+requires-python = ">=3.9"
+dependencies = [
+  "numpy",
+  "scipy",
+  "networkx",
+  "pandas",
+  "matplotlib",
+  "plotly",
+  "pytest",
+]
+
+authors = [
+  {name = "Roman Ellerbrock", email = "romanellerbrock@gmail.com"}
+]
+
+description = "A Tensor Network library focused on optimization."
+readme = "README.md"
+classifiers = [
+  "Programming Language :: Python :: 3",
+]
+
+
+[project.urls]
+Repository = "https://github.com/roman-ellerbrock/pyQuTree"
+"Bug Tracker" = "https://github.com/roman-ellerbrock/pyQuTree/issues"
+
+
+[tool.setuptools]
+packages = ["qutree"]

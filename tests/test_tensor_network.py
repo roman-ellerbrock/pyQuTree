@@ -18,11 +18,11 @@ def test_contraction():
     x = F.nodes[2]['A']
     assert np.allclose(C, x)
 
-def test_ttopt_contract():
+def test_ttopt_contract1():
     def f_sin(x):
         y = x * np.pi
         return np.cos(y[0]) * np.sin(y[1])
-    
+
     r = 2
     N = 20
     func = f_sin
@@ -33,7 +33,7 @@ def test_ttopt_contract():
 
     F = contract(Gopt)
     F2 = F.nodes[2]['A']
-    
+
     x1 = Grid(linspace(-1, 1, N), 0)
     x2 = Grid(linspace(-1, 1, N), 1)
     xyz = x1 @ x2
@@ -42,11 +42,11 @@ def test_ttopt_contract():
     assert (np.linalg.norm(Fref - F2)/np.linalg.norm(Fref)) < 1e-12
 
 
-def test_ttopt_contract():
+def test_ttopt_contract2():
     def f_sin(x):
         y = x * np.pi
         return np.cos(y[0]) * np.sin(y[1])
-    
+
     r = 2
     N = 20
     func = f_sin
@@ -56,7 +56,7 @@ def test_ttopt_contract():
     Gopt, _ = ttnopt(G, O, nsweep = 5)
 
     F = extract_root_tensor(contract(Gopt))
-    
+
     x1 = Grid(linspace(-1, 1, N), 0)
     x2 = Grid(linspace(-1, 1, N), 1)
     xyz = x1 @ x2
