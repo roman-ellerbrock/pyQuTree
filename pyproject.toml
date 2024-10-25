@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "qutree"
+version = "0.1"
+description = "QuTree: A tree tensor network package"
+authors = [
+    { name = "Roman Ellerbrock", email = "romanellerbrock@gmail.com" }
+]
+readme = "README.md"
+license = { text = "license.txt" }
+keywords = ["tensor network", "chemistry", "optimization"]
+dependencies = [
+    "numpy",
+    "networkx",
+    "matplotlib",
+    "plotly",
+    "pytest",
+    "pre-commit",
+    "scipy",
+    "pandas",
+    "imageio",
+]
+
+requires-python = "> 3.9"
+classifiers = [
+    'Programming Language :: Python :: 3',
+    'License :: Other/Proprietary License',
+    'Operating System :: OS Independent',
+]
+
+[project.urls]
+repository = 'https://github.com/roman-ellerbrock/pyqutree'
+
+[tool.setuptools]
+packages = ["qutree"]
