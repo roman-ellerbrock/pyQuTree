@@ -58,11 +58,12 @@ def plot_tt_diagram(tn, draw_ranks = True):
     pos = {i: pos12[i] for i in range(-nleaves, nleaves)}
 #    plt.draw() 
     plt.gca().set_aspect(15)  # 'equal' ensures that one unit in x is equal to one unit in y
-    nx.draw(tn, pos = pos, with_labels=False, node_size = 250, font_size = 8)
+    fig = nx.draw(tn, pos = pos, with_labels=False, node_size = 250, font_size = 8)
     if draw_ranks:
         ranks = nx.get_edge_attributes(tn, 'r')
         nx.draw_networkx_edge_labels(tn, pos, edge_labels=ranks, font_size=14)
 #    plt.subplots_adjust(left=0.1, right=0.9, bottom=10.1, top=20.9)
+    return fig
 
 def plot_tn_xyz(tn, fun, q_to_x = None):
     # collect grids
