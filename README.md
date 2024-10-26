@@ -15,26 +15,22 @@ from qutree import *
 
 def V(x):
     # change with your objective function
-    return np.sum(x**2)
+    return np.sum((x-np.ones(x.shape[0]))**2)
 
-f = 3
-N = 20
-r = 4
+N, r, f = 20, 4, 3
 
 objective = Objective(V)
 
 # create a tensor network, e.g. a balanced tree
 tn = balanced_tree(f, r, N) 
 
-# or a tensor train
-#tn = tensor_train_graph(f=3, r=4, N=20)
-
 # Create a primitive grid and tensor network grid
 primitive_grid = [linspace(-2., 2., N)] * f
-tn = tn_grid(tn, primitive_grid)
 
 # tensor network optimization
-tn_opt, dataframe = ttnopt(tn, objective, nsweep = 6)
+tn_updated = ttnopt(tn, objective, nsweep = 6, primitive_grid)
+print(objective)
+dataframe = objective.logger.df
 print(dataframe)
 ```
 
