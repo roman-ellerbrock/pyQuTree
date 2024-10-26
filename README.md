@@ -17,7 +17,7 @@ def V(x):
     # change with your objective function
     return np.sum((x-np.ones(x.shape[0]))**2)
 
-N, r, f = 20, 4, 3
+N, r, f, nsweep = 21, 4, 3, 6
 
 objective = Objective(V)
 
@@ -25,14 +25,15 @@ objective = Objective(V)
 tn = balanced_tree(f, r, N) 
 
 # Create a primitive grid and tensor network grid
-primitive_grid = [linspace(-2., 2., N)] * f
+primitive_grid = [linspace(-1., 3., N)] * f
 
 # tensor network optimization
-tn_updated = ttnopt(tn, objective, nsweep = 6, primitive_grid)
+tn_updated = ttnopt(tn, objective, nsweep, primitive_grid)
 print(objective)
 dataframe = objective.logger.df
 print(dataframe)
 ```
+More details can be found in `examples/ttopt_example.ipynb`.
 
 If Qutree was useful in your work, please consider citing the paper[^1].
 
