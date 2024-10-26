@@ -116,10 +116,12 @@ def _star_sweep(G, node, parent = None, sweep = []):
     if parent is not None:
         sweep.append((node, parent))
 
-def star_sweep(G):
+def star_sweep(G, exclude_leafs = False):
     rt = root(G)
     sweep = []
     _star_sweep(G, rt, None, sweep)
+    if exclude_leafs:
+        sweep = [edge for edge in sweep if not is_leaf(edge, G)]
     return sweep
 
 def remove_edge(G, edge):

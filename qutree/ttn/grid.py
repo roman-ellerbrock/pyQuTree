@@ -96,24 +96,25 @@ def build_node_grid(G):
         grid = cartesian_product(pre_grids).permute()
         G.nodes[node]['grid'] = grid
 
-def tn_grid(G, grids):
+def tn_grid(G, primitive_grid, start_grid = None):
     """
     Initialize a random tn grid
     G: tensor network
     grids: list of grids for each coordinate
     """
 
-    coord = 0
-    for leaf in sorted(up_leaves(G)):
+    for coord, leaf in enumerate(sorted(up_leaves(G))):
         G.edges[leaf]['coordinate'] = coord
-        G.edges[leaf]['grid'] = Grid(grids[coord], coord)
-        coord += 1
+        G.edges[leaf]['grid'] = Grid(primitive_grid[coord], coord)
 
     for edge in sweep(G, False):
         r = G.edges[edge]['r']
         pre = pre_edges(G, edge, remove_flipped=True)
         pre_grids = collect(G, pre, 'grid')
         next_grid = cartesian_product(pre_grids).random_subset(r)
+        if start_grid is not None:
+            assert start_grid.shape[0] >= r
+            next_grid.grid = start_grid[:r, next_grid.coords]
         G.edges[edge]['grid'] = next_grid
 
     build_node_grid(G)
