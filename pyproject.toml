@@ -33,6 +33,7 @@ classifiers = [
 
 [project.urls]
 repository = 'https://github.com/roman-ellerbrock/pyqutree'
+"Bug Tracker" = 'https://github.com/roman-ellerbrock/pyqutree/issues'
 
 [tool.setuptools]
 packages = ["qutree"]
