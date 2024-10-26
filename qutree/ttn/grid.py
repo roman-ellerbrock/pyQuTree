@@ -57,7 +57,9 @@ class Grid:
             coords = self.coords[idx[1]]
             return Grid(grid, coords)
         if not isinstance(idx, int):
-            raise ValueError("Index must be an integer or a tuple of two integers.")
+            grid = self.grid[:, idx]
+            coords = self.coords[idx]
+            return Grid(grid, coords)
         grid = self.grid[idx]
         return Grid(grid, self.coords)
     
