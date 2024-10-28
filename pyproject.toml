@@ -36,4 +36,4 @@ repository = 'https://github.com/roman-ellerbrock/pyqutree'
 "Bug Tracker" = 'https://github.com/roman-ellerbrock/pyqutree/issues'
 
 [tool.setuptools]
-packages = ["qutree"]
+packages = ["qutree", "qutree.matrix_factorizations", "qutree.ttn]

@@ -3,7 +3,11 @@
 A smaller python version of the Tree Tensor Network library Qutree[^1]
 currently centered around optimization.
 
-Install pyQutree via
+Install pyQutree via pip using
+```bash
+pip install git+https://github.com/roman-ellerbrock/pyQuTree.git
+```
+or create a conda environment via
 ```bash
 conda env {create, update} --file environment.yml
 conda activate qutree
