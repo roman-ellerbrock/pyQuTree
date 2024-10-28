@@ -30,7 +30,7 @@ def test_ttopt_contract():
     O = Objective(func)
     G = balanced_tree(2, r, N)
     G = tn_grid(G, [linspace(-1, 1, N)] * 2)
-    Gopt, _ = ttnopt(G, O, nsweep = 5)
+    Gopt = ttnopt(G, O, nsweep = 5)
 
     F = contract(Gopt)
     F2 = F.nodes[2]['A']
@@ -54,7 +54,7 @@ def test_ttopt_contract():
     O = Objective(func)
     G = balanced_tree(2, r, N)
     G = tn_grid(G, [linspace(-1, 1, N)] * 2)
-    Gopt, _ = ttnopt(G, O, nsweep = 5)
+    Gopt = ttnopt(G, O, nsweep = 5)
 
     F = extract_root_tensor(contract(Gopt))
     

@@ -9,7 +9,7 @@ class Logger:
         self.df = pd.concat([self.df, pd.DataFrame(dic, index=[0])], ignore_index=True)
 
     def __str__(self):
-        return f"Optimal value:\n{self.df.loc[self.df["f"].idxmin()]}"
+        return f"Optimal value:\n{self.df.loc[self.df['f'].idxmin()]}"
 
 
 def nparray_to_tuple(arr, precision = 8):
