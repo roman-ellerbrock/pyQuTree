@@ -169,11 +169,19 @@ def tensor_train_graph(f, r = 2, N = 8):
         G.add_edge(i, i - 1)
 
     # add ranks
-    for edge in G.edges():
+    for edge in sweep(G):
         if not is_leaf(edge, G):
-            G.edges[edge]['r'] = r
+            pre = pre_edges(G, edge, True)
+            rmax = np.prod(collect(G, pre, 'r'))
+            G.edges[edge]['r'] = min(r, rmax)
         else:
             G.edges[edge]['r'] = N
+    
+    for edge in sweep(G):
+        if not is_leaf(edge, G):
+            r = G.edges[edge]['r']
+            other = G.edges[flip(edge)]['r']
+            G.edges[edge]['r'] = min(r, other)
 
     # add random edge entries
     coord = 0
@@ -284,10 +292,18 @@ def balanced_tree(f, r = 2, N = 8):
         G.add_edge(edge[1], edge[0])
     
     # add ranks
-    for edge in G.edges():
+    for edge in sweep(G):
         if not is_leaf(edge, G):
-            G.edges[edge]['r'] = r
+            pre = pre_edges(G, edge, True)
+            rmax = np.prod(collect(G, pre, 'r'))
+            G.edges[edge]['r'] = min(r, rmax)
         else:
             G.edges[edge]['r'] = N
+
+    for edge in sweep(G):
+        if not is_leaf(edge, G):
+            r = G.edges[edge]['r']
+            other = G.edges[flip(edge)]['r']
+            G.edges[edge]['r'] = min(r, other)
 
     return G 

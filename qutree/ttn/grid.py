@@ -44,9 +44,8 @@ class Grid:
         return output
 
     def random_subset(self, n):
-        if n > self.grid.shape[0]:
-            raise ValueError("Subset size cannot be larger than the grid size.")
-        idx = np.random.choice(self.grid.shape[0], n, replace=False)
+        m = min(n, self.grid.shape[0])
+        idx = np.random.choice(self.grid.shape[0], m, replace=False)
         return Grid(self.grid[idx], self.coords)
 
     def __getitem__(self, idx):
