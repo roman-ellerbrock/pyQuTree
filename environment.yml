@@ -5,3 +5,7 @@ dependencies:
   - pip
   - pip:
     - -e .
+    - ipython
+    - nbformat
+    - kaleido
+    - torch

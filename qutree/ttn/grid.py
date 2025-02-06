@@ -77,6 +77,12 @@ class Grid:
     
     def shape(self):
         return self.grid.shape
+    
+    def num_points(self):
+        return self.shape()[0]
+    
+    def num_coords(self):
+        return self.shape()[1]
 
 def cartesian_product(grids):
     if len(grids) == 1:
