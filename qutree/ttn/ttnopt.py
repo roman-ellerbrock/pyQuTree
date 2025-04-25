@@ -16,21 +16,23 @@ def nparray_to_tuple(arr, precision = 8):
     return tuple(np.round(arr, precision))
     
 class Objective:
-    def __init__(self, Err):
+    def __init__(self, Err, transformer = lambda x: x):
         self.Err = Err
         self.logger = Logger()
         self.cache = {}
         self.cache_hits = 0
         self.function_calls = 0
+        self.transformer = transformer
 
     def __call__(self, x, **kwargs):
         # cache check
         key = nparray_to_tuple(x)
         if key in self.cache:
             self.cache_hits += 1
-            return self.cache[key]
+            return self.transformer(self.cache[key])
 
         f = self.Err(x)
+        feff = self.transformer(f)
 
         # add to cache
         self.cache[key] = f
@@ -40,7 +42,7 @@ class Objective:
         if kwargs:
             xs = {f'x{i+1}': key[i] for i in range(len(x))}
             self.logger({**xs, 'f': f, **kwargs})
-        return f
+        return feff
 
     def __str__(self):
         nfunction = self.function_calls
@@ -91,31 +93,35 @@ def ttnopt(G: nx.DiGraph, O: Objective, nsweep: int = 6,
 
     return G
 
-# def tn_CUR():
-    # fix the tensors at the nodes
-    # for node in G.nodes():
-    #     if node < 0:
-    #         continue
-    #     edges = G.in_edges(node)
-    #     grids = collect(G, edges, 'grid')
-    #     grid = cartesian_product(grids).permute()
-    #     ranks = collect(G, edges, 'r')
-    #     A = quTensor(grid.evaluate(O).reshape(ranks), edges)
-    #     G.nodes[node]['A'] = A
+def tn_CUR(G, O):
+    # Fix the tensors at the nodes to get proper cross approximation of O
+    # Will re-evaluate points that have been evaluated already but who cares.
+    # G: Tensor network
+    # O: Objective function (should have cache)
+    for node in G.nodes():
+        if node < 0:
+            continue
+        edges = G.in_edges(node)
+        grids = collect(G, edges, 'grid')
+        grid = cartesian_product(grids).permute()
+        ranks = collect(G, edges, 'r')
+        A = quTensor(grid.evaluate(O).reshape(ranks), edges)
+        G.nodes[node]['A'] = A
 
-    # for edge in sweep(G, include_leaves=False):
-    #     edges = pre_edges(G, edge)
-    #     grids = collect(G, edges, 'grid')
-    #     grid = cartesian_product(grids).permute()
-    #     ranks = collect(G, edges, 'r')
-    #     A = quTensor(grid.evaluate(O).reshape(ranks), edges)
-    #     G[edge[0]][edge[1]]['A'] = A
+    for edge in sweep(G, include_leaves=False):
+        edges = pre_edges(G, edge)
+        grids = collect(G, edges, 'grid')
+        grid = cartesian_product(grids).permute()
+        ranks = collect(G, edges, 'r')
+        A = quTensor(grid.evaluate(O).reshape(ranks), edges)
+        G[edge[0]][edge[1]]['A'] = A
 
-    # for edge in sweep(G, include_leaves=False):
-    #     edges = [edge, flip(edge)]
-    #     grids = collect(G, edges, 'grid')
-    #     grid = cartesian_product(grids).permute()
-    #     ranks = collect(G, edges, 'r')
-    #     cross = grid.evaluate(O).reshape(ranks)
-    #     Ainv = quTensor(regularized_inverse(cross, 1e-12), edges)
-    #     G[edge[0]][edge[1]]['A'] = Ainv
+    for edge in sweep(G, include_leaves=False):
+        edges = [edge, flip(edge)]
+        grids = collect(G, edges, 'grid')
+        grid = cartesian_product(grids).permute()
+        ranks = collect(G, edges, 'r')
+        cross = grid.evaluate(O).reshape(ranks)
+        Ainv = quTensor(regularized_inverse(cross, 1e-12), edges)
+        G[edge[0]][edge[1]]['A'] = Ainv
+    return G

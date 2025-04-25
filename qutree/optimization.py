@@ -1,7 +1,10 @@
 import numpy as np
-
+import random
 from qutree import cartesian_product
 from qutree.matrix_factorizations.maxvol import maxvol
+from scipy.optimize import linear_sum_assignment
+import itertools
+import random
 
 class Model:
     def __init__(self):
@@ -15,12 +18,35 @@ class Model:
             grid = self.sweep(grid, function, epoch)
         return grid
 
-def maxvol_selection(grid, V, dim2, **kwargs):
+def evaluate_grid(grid, V, dim2, **kwargs):
     v = grid.evaluate(V, **kwargs)
-    v = v.reshape((int(v.size / dim2), dim2)).T
-    nidx, R = maxvol(v)
+    dim1 = int(v.size / dim2)
+    v = v.reshape(dim1, dim2).T
+    return v
+
+def maxvol_selection(grid, V, dim2, **kwargs):
+    mat = evaluate_grid(grid, V, dim2, **kwargs)
+    nidx, R = maxvol(mat)
     grid.grid = grid.grid[nidx, :]
-    return grid
+    return grid, mat
+
+def assignment_selection(grid, V, dim2, **kwargs):
+    mat = evaluate_grid(grid, V, dim2, **kwargs)
+    Veff = mat# - np.min(mat)
+    # print('before')
+    # print(grid)
+    # print('mat = ')
+    # print(Veff)
+    rows, cols = linear_sum_assignment(Veff)
+    idcs = np.ravel_multi_index((cols, rows), Veff.T.shape)
+    # print(f"{rows = }")
+    # print(f"{cols = }")
+    # print(idcs)
+    grid.grid = grid.grid[idcs, :]
+    mat2 = grid.evaluate(V)
+    # print(f"{mat2 = }")
+    # print(grid.grid)
+    return grid, mat
 
 def rest(idx, grid):
     all = set(range(grid.coords.shape[0]))
@@ -28,15 +54,10 @@ def rest(idx, grid):
 
 
 def greedy_selection(grid, V, r, **kwargs):
-    # grid = grid.copy()
     vmat = grid.evaluate(V, **kwargs)
-    # for i in range(vmat.shape[0]):
-    #     print(i, grid.grid[i, :], vmat[i])
-    # print(np.argsort(vmat))
     nidx = np.argsort(vmat)[:r]
-    # nidx = np.argsort(vmat)[-r:]
     grid.grid = grid.grid[nidx, :]
-    return grid
+    return grid, vmat
 
 
 def recombination(grid, idxs):
@@ -57,11 +78,54 @@ def create_mutations(grid, replacement_grid):
 
 def variation_update(grid, replacement_grid, V, r, **kwargs):
     ngrid = create_mutations(grid, replacement_grid)
-    return maxvol_selection(ngrid, V, replacement_grid.num_points(), **kwargs)
-    # return greedy_selection(ngrid, V, r, **kwargs)
+    return assignment_selection(ngrid, V, replacement_grid.num_points(), **kwargs)
+    # return maxvol_selection(ngrid, V, replacement_grid.num_points(), **kwargs)
+    try:
+        return maxvol_selection(ngrid, V, replacement_grid.num_points(), **kwargs)
+    except:
+        return greedy_selection(ngrid, V, r, **kwargs)
 
 
 def recombination_update(grid, idcs, V, r, **kwargs):
     ngrid = recombination(grid, idcs)
     return maxvol_selection(ngrid, V, grid.num_points(), **kwargs)
+    # return greedy_selection(ngrid, V, r, **kwargs)
 
+def random_points(primitive_grid, r):
+    x = []
+    for grid in primitive_grid:
+        g = grid.grid.reshape(-1)
+
+        subset = random.sample(list(g), r)
+        x.append(subset)
+    x = np.array(x).T
+    return x
+
+def random_points_new(primitive_grids, r):
+    def unique_integer_arrays(r, N, f):
+        if r > N**f:
+            raise ValueError("Not enough unique combinations for given length and range.")
+        samples = random.sample(list(itertools.product(range(N), repeat=f)), r)
+        return np.array(samples)
+
+    def indices_to_grid_points(index_array, grid_linspaces):
+        return np.array([[grid_linspaces[i].grid[idx][0] for i, idx in enumerate(point)]
+                         for point in index_array])
+
+    f = len(primitive_grids)
+    N = primitive_grids[0].grid.shape[0]
+    idcs = unique_integer_arrays(r, N, f)
+    return indices_to_grid_points(idcs, primitive_grids)
+
+
+class TensorRankOptimization(Model):
+
+    def data(self, primitive_grid, r):
+        self.primitive_grid = primitive_grid
+        self.r = r
+
+    def sweep(self, grid, function, epoch):
+        for k in range(grid.num_coords()):
+            grid, vmat = variation_update(grid, self.primitive_grid[k], function, self.r, epoch = epoch)
+
+        return grid
