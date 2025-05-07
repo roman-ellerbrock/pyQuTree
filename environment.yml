@@ -8,5 +8,6 @@ dependencies:
     - ipython
     - nbformat
     - kaleido
+    - numpy
     - torch
     - ase
