@@ -15,7 +15,7 @@ from scipy.linalg import lu
 from scipy.linalg import solve_triangular
 
 
-def maxvol(A, e=1.05, k=100):
+def maxvol(A, e=1.05, k=100, eps=1e-8):
     """Compute the maximal-volume submatrix for given tall matrix.
 
     Args:
@@ -27,6 +27,13 @@ def maxvol(A, e=1.05, k=100):
             will be slightly lower (in most cases, the optimal value is within
             the range of 1.01 - 1.1).
         k (int): maximum number of iterations (should be >= 1).
+        eps (float): small value added to the diagonal of the matrix U in the
+            LU decomposition (should be >= 0). This value is used to avoid
+            division by zero in the case of a singular matrix. If the value is
+            equal to zero, then the algorithm will not work correctly for
+            singular matrices. If the value is too large, then the accuracy of
+            the algorithm will be significantly reduced. The recommended value
+            is 1e-8, which is sufficient for most cases.
 
     Returns:
         (np.ndarray, np.ndarray): the row numbers I containing the maximal
@@ -51,10 +58,17 @@ def maxvol(A, e=1.05, k=100):
         raise ValueError('Input matrix should be "tall"')
 
     P, L, U = lu(A, check_finite=False)
-    I = P[:, :r].argmax(axis=0)
-    Q = solve_triangular(U, A.T, trans=1, check_finite=False)
-    B = solve_triangular(L[:r, :], Q, trans=1, check_finite=False,
-        unit_diagonal=True, lower=True).T
+    try:
+        I = P[:, :r].argmax(axis=0)
+        Q = solve_triangular(U, A.T, trans=1, check_finite=False)
+        B = solve_triangular(L[:r, :], Q, trans=1, check_finite=False,
+            unit_diagonal=True, lower=True).T
+    except np.linalg.LinAlgError:
+        U[np.diag_indices_from(U)] += eps
+        I = P[:, :r].argmax(axis=0)
+        Q = solve_triangular(U, A.T, trans=1, check_finite=False)
+        B = solve_triangular(L[:r, :], Q, trans=1, check_finite=False,
+            unit_diagonal=True, lower=True).T
 
     for _ in range(k):
         i, j = np.divmod(np.abs(B).argmax(), r)
