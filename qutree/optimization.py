@@ -16,7 +16,7 @@ class Model:
 
     def optimize(self, grid, function, n_epoch):
         for epoch in range(n_epoch):
-            grid = self.sweep(grid, function, epoch)
+            grid, _ = self.sweep(grid, function, epoch)
         return grid
 
 def evaluate_grid(grid, V, dim2, **kwargs):
@@ -104,16 +104,34 @@ def group_assignment(grid, V, groups, r, **kwargs):
 
 
 def variation_update(grid, replacement_grid, V, r, **kwargs):
+    # generate candidate grids and the mutation tensor `a`
     ngrid, a = create_mutations(grid, replacement_grid)
+    # build group labels from the mutated points
     groups = column_labels(a.grid.T)
-    return group_assignment(ngrid, V, groups, replacement_grid.num_points(), **kwargs)
+    # run the grouped optimization, unpack and return only the Grid
+    new_grid, vmat = group_assignment(
+        ngrid,
+        V,
+        groups,
+        replacement_grid.num_points(),
+        **kwargs
+    )
+    return new_grid, vmat
     # return assignment_selection(ngrid, V, replacement_grid.num_points(), **kwargs)
     # return greedy_selection(ngrid, V, r, **kwargs)
 
 
 def recombination_update(grid, idcs, V, r, **kwargs):
+    # build the recombined grid of two subsets
     ngrid = recombination(grid, idcs)
-    return maxvol_selection(ngrid, V, grid.num_points(), **kwargs)
+    # run max-volume selection, unpack and return only the Grid
+    new_grid, vmat = maxvol_selection(
+        ngrid,
+        V,
+        grid.num_points(),
+        **kwargs
+    )
+    return new_grid, vmat
     # return greedy_selection(ngrid, V, r, **kwargs)
 
 def random_points(primitive_grid, r):
@@ -157,4 +175,4 @@ class TensorRankOptimization(Model):
         for k in range(grid.num_coords()):
             grid, vmat = variation_update(grid, self.primitive_grid[k], function, self.r, epoch = epoch)
 
-        return grid
+        return grid, vmat
