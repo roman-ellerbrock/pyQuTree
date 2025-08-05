@@ -110,8 +110,8 @@ def tn_grid(G, primitive_grid, start_grid = None):
     grids: list of grids for each coordinate
     """
 
-    for coord, leaf in enumerate(sorted(up_leaves(G))):
-        G.edges[leaf]['coordinate'] = coord
+    for leaf in sorted(up_leaves(G)):
+        coord = G.edges[leaf]['coordinate']
         G.edges[leaf]['grid'] = Grid(primitive_grid[coord], coord)
 
     for edge in sweep(G, False):

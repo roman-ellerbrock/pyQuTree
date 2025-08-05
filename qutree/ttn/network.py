@@ -86,8 +86,11 @@ def rsweep(G):
 
 def add_leaves(G, f):
     for i in range(f):
+        edge = (i, -i - 1)
         G.add_edge(i, -i - 1)
         G.add_edge(-i - 1, i)
+        G.edges[edge]['coordinate'] = i
+        G.edges[flip(edge)]['coordinate'] = i
 
 def root(G):
     """
@@ -150,7 +153,7 @@ def add_layer_index(G, root = None):
         G.nodes[node]['layer'] = layer
     return G
 
-def tensor_train_graph(f, r = 2, N = 8):
+def tensor_train_graph(f, r = 2, primitive_grid: int | list[int] = 8):
     """
     Generate a tensor train network
     """
@@ -168,6 +171,15 @@ def tensor_train_graph(f, r = 2, N = 8):
     for i in range(f - 1, 0, -1):
         G.add_edge(i, i - 1)
 
+    if isinstance(primitive_grid, int):
+        Ns = [primitive_grid] * f
+    else:
+        # Ns = N
+        Ns = []
+        for grid in primitive_grid:
+            Ns.append(len(grid))
+            
+
     # add ranks
     for edge in sweep(G):
         if not is_leaf(edge, G):
@@ -175,20 +187,15 @@ def tensor_train_graph(f, r = 2, N = 8):
             rmax = np.prod(collect(G, pre, 'r'))
             G.edges[edge]['r'] = min(r, rmax)
         else:
-            G.edges[edge]['r'] = N
-    
+            coord = G.edges[edge]['coordinate']
+            G.edges[edge]['r'] = Ns[coord]
+
     for edge in sweep(G):
         if not is_leaf(edge, G):
             r = G.edges[edge]['r']
             other = G.edges[flip(edge)]['r']
             G.edges[edge]['r'] = min(r, other)
 
-    # add random edge entries
-    coord = 0
-    for edge in G.edges():
-        if is_leaf(edge, G):
-            G.edges[edge]['coordinate'] = coord
-            coord += 1
     return G
 
 def tensor_train_operator_graph(f, r = 2, N = 8):
