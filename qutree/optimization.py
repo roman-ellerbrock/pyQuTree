@@ -65,21 +65,21 @@ class Model:
         return grid
 
 
-def evaluate_grid(grid: Grid, V: callable, dim2: int, **kwargs) -> np.ndarray:
+def evaluate_grid(grid: Grid, function: callable, dim2: int, **kwargs) -> np.ndarray:
     """
-    Evaluate V on each point in `grid`, then reshape to a (dim2 x dim1) matrix.
+    Evaluate `function` on each point in `grid`, then reshape to a (dim2 x dim1) matrix.
 
     Args:
         grid: Grid of shape (r*dim2 x f).
-        V:     Callable; grid.evaluate(V) returns flat array length r*dim2.
-        dim2:  Number of rows in the resulting matrix.
+        function: Callable; grid.evaluate(V) returns flat array length r*dim2.
+        dim2: Number of rows in the resulting matrix.
 
     Returns:
         mat:   Numpy array shape (dim2, dim1).
     """
-    v = grid.evaluate(V, **kwargs)
-    dim1 = int(v.size / dim2)
-    return v.reshape(dim1, dim2).T
+    vmat = grid.evaluate(function, **kwargs)
+    dim1 = int(vmat.size / dim2)
+    return vmat.reshape(dim1, dim2).T
 
 
 def random_points(primitive_grid: list[Grid], r: int) -> np.ndarray:
@@ -119,7 +119,7 @@ def random_grid_points(primitive_grids: list[Grid], r: int) -> Grid:
     return Grid(coords, list(range(f)))
 
 
-def maxvol_selection(grid: Grid, V: callable, dim2: int, **kwargs):
+def maxvol_selection(grid: Grid, function: callable, dim2: int, **kwargs):
     """
     Select rows of the (dim2 x dim1) evaluation matrix that maximize volume.
 
@@ -129,26 +129,26 @@ def maxvol_selection(grid: Grid, V: callable, dim2: int, **kwargs):
         grid: Grid reduced to the selected rows.
         mat:  The full evaluation matrix before selection.
     """
-    mat = evaluate_grid(grid, V, dim2, **kwargs)
+    mat = evaluate_grid(grid, function, dim2, **kwargs)
     nidx, R = maxvol(mat)
     grid.grid = grid.grid[nidx, :]
     return grid, mat
 
 
-def assignment_selection(grid: Grid, V: callable, dim2: int, **kwargs):
+def assignment_selection(grid: Grid, function: callable, dim2: int, **kwargs):
     """
     Select rows by solving a linear assignment problem on the cost matrix.
 
     Args:
         grid: Grid of candidate points.
-        V:    Objective callable.
+        function: Objective callable.
         dim2: Number of rows in cost matrix.
 
     Returns:
         grid: Updated Grid with selected points.
         mat:  Cost matrix used for assignment.
     """
-    mat = evaluate_grid(grid, V, dim2, **kwargs)
+    mat = evaluate_grid(grid, function, dim2, **kwargs)
     rows, cols = linear_sum_assignment(mat)
     # map (row_i, col_j) back to flat index
     idcs = np.ravel_multi_index((rows, cols), mat.shape)
@@ -175,7 +175,7 @@ def greedy_column_min(matrix: np.ndarray) -> tuple[list[int], list[int]]:
     return rows, cols
 
 
-def greedy_selection(grid: Grid, V: callable, r: int, **kwargs):
+def greedy_selection(grid: Grid, function: callable, r: int, **kwargs):
     """
     Select grid points by choosing minimum in each column.
 
@@ -183,7 +183,7 @@ def greedy_selection(grid: Grid, V: callable, r: int, **kwargs):
         grid: Updated Grid.
         vmat: Evaluation matrix used.
     """
-    vmat = evaluate_grid(grid, V, r, **kwargs)
+    vmat = evaluate_grid(grid, function, r, **kwargs)
     rows, cols = greedy_column_min(vmat)
     idcs = np.ravel_multi_index((rows, cols), vmat.T.shape)
     grid.grid = grid.grid[idcs, :]
@@ -250,7 +250,7 @@ def greedy_with_group_assignment(matrix: np.ndarray,
     Run linear assignment poblem solver separately for each group of columns.
 
     Args:
-      matrix: (R × C) cost matrix.
+      matrix: (R x C) cost matrix.
       groups: length-C array assigning each column to a group.
 
     Returns:
@@ -266,7 +266,7 @@ def greedy_with_group_assignment(matrix: np.ndarray,
     return list(selected_rows), list(range(matrix.shape[1]))
 
 
-def group_assignment(grid: Grid, V: callable,
+def group_assignment(grid: Grid, function: callable,
                      groups: np.ndarray, r: int, **kwargs):
     """
     Grouped selection: select one row per column group via greedy_with_group_assignment.
@@ -275,7 +275,7 @@ def group_assignment(grid: Grid, V: callable,
       grid: Updated Grid.
       vmat: Evaluation matrix used.
     """
-    vmat = evaluate_grid(grid, V, r, **kwargs)
+    vmat = evaluate_grid(grid, function, r, **kwargs)
     rows, cols = greedy_with_group_assignment(vmat, groups)
     idcs = np.ravel_multi_index((cols, rows), vmat.T.shape)
     grid.grid = grid.grid[idcs, :]
@@ -283,7 +283,7 @@ def group_assignment(grid: Grid, V: callable,
 
 
 def variation_update(grid: Grid, replacement_grid: Grid,
-                     V: callable, r: int, **kwargs) -> tuple[Grid, np.ndarray]:
+                     function: callable, **kwargs) -> tuple[Grid, np.ndarray]:
     """
     One cross-update on a single physical leg:
       grid --create_mutations--> candidates
@@ -291,16 +291,16 @@ def variation_update(grid: Grid, replacement_grid: Grid,
     """
     ngrid, a = create_mutations(grid, replacement_grid)
     groups = column_labels(a.grid.T)
-    return group_assignment(ngrid, V, groups, replacement_grid.num_points(), **kwargs)
+    return group_assignment(ngrid, function, groups, replacement_grid.num_points(), **kwargs)
 
 
 def recombination_update(grid: Grid, idxs: list[int],
-                         V: callable, r: int, **kwargs) -> tuple[Grid, np.ndarray]:
+                         function: callable, **kwargs) -> tuple[Grid, np.ndarray]:
     """
     Recombine two subsets via max-volume selection.
     """
     ngrid = recombination(grid, idxs)
-    return maxvol_selection(ngrid, V, grid.num_points(), **kwargs)
+    return maxvol_selection(ngrid, function, grid.num_points(), **kwargs)
 
 
 class TensorRankOptimization(Model):
@@ -332,7 +332,6 @@ class TensorRankOptimization(Model):
                 grid,
                 self.primitive_grid[k],
                 function,
-                self.r,
                 epoch=epoch
             )
         return grid, vmat
@@ -366,7 +365,7 @@ class MatrixTrainOptimization(Model):
             ) for k in range(self.N - 2)
         ]
 
-    def sweep(self, _grid, V: callable, epoch: int):
+    def sweep(self, _grid, function: callable, epoch: int):
         """
         One left-to-right pass.
 
@@ -382,11 +381,11 @@ class MatrixTrainOptimization(Model):
                 self.primitives[k+2]
             ]
             self.cores[k], vmat = self._core_update(
-                self.cores[k], legs, V
+                self.cores[k], legs, function
             )
         return self.cores, vmat
 
-    def _core_update(self, skel_core: Grid, leg_grids: list[Grid], V: callable):
+    def _core_update(self, skel_core: Grid, leg_grids: list[Grid], function: callable):
         """
         Cross-update one triple-junction:
           1) create_mutations_multi on 3 legs
@@ -396,7 +395,7 @@ class MatrixTrainOptimization(Model):
         Returns new_core and cost-matrix
         """
         candidates, _ = create_mutations_multi(skel_core, leg_grids)
-        vals = candidates.evaluate(V)
+        vals = candidates.evaluate(function)
         Ni = leg_grids[0].num_points()
         mat = vals.reshape(-1, Ni).T
         rows, cols = linear_sum_assignment(mat)
