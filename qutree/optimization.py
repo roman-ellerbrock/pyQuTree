@@ -309,15 +309,19 @@ class TensorRankOptimization(Model):
     in a CP-format tree tensor network (TTNcross).
 
     Args:
-      primitive_grid: list of f Grids, one per dimension.
+      primitive_grids: list of f Grids, one per each dimension.
       r: Number of cross-pivots (rank).
+    
+    After a sweep, returns:
+        grid: Updated Grid of shape (r x f).
+        vmat: Evaluation matrix of shape (r x f).
     """
 
-    def __init__(self, primitive_grid: list[Grid], r: int):
-        self.data(primitive_grid, r)
+    def __init__(self, primitive_grids: list[Grid], r: int):
+        self.data(primitive_grids, r)
 
-    def data(self, primitive_grid: list[Grid], r: int):
-        self.primitive_grid = primitive_grid
+    def data(self, primitive_grids: list[Grid], r: int):
+        self.primitive_grids = primitive_grids
         self.r = r
 
     def sweep(self, grid: Grid, function: callable, epoch: int):
@@ -330,7 +334,7 @@ class TensorRankOptimization(Model):
         for k in range(grid.num_coords()):
             grid, vmat = variation_update(
                 grid,
-                self.primitive_grid[k],
+                self.primitive_grids[k],
                 function,
                 epoch=epoch
             )
@@ -339,11 +343,15 @@ class TensorRankOptimization(Model):
 
 class MatrixTrainOptimization(Model):
     """
-    Optimizer for an N-site Matrix Network.
+    Optimizer for an N-site Matrix Train.
+
+    Args:
+        primitive_grids: list of N one-dimensional Grids (Ni x 1).
+        r: Number of cross-pivots.
 
     After a sweep, returns:
-      cores: list of N-2 Grid objects, each shape (r x 3)
-      vmat : the final cost-matrix
+      cores: list of N-2 Grid objects, each shape (r x 3).
+      vmat : Evaluation matrix.
     """
 
     def __init__(self, primitive_grids: list[Grid], r: int):
@@ -352,7 +360,7 @@ class MatrixTrainOptimization(Model):
           primitive_grids: list of N one-dimensional Grids (Ni x 1)
           r: skeleton junction rank
         """
-        self.primitives = primitive_grids
+        self.primitive_grids = primitive_grids
         self.N = len(primitive_grids)
         self.r = r
 
@@ -365,6 +373,10 @@ class MatrixTrainOptimization(Model):
             ) for k in range(self.N - 2)
         ]
 
+    def data(self, primitive_grids: list[Grid], r: int):
+        self.primitive_grids = primitive_grids
+        self.r = r
+
     def sweep(self, _grid, function: callable, epoch: int):
         """
         One left-to-right pass.
@@ -376,16 +388,16 @@ class MatrixTrainOptimization(Model):
 
         for k in range(self.N - 2):
             legs = [
-                self.primitives[k],
-                self.primitives[k+1],
-                self.primitives[k+2]
+                self.primitive_grids[k],
+                self.primitive_grids[k+1],
+                self.primitive_grids[k+2]
             ]
             self.cores[k], vmat = self._core_update(
-                self.cores[k], legs, function
+                self.cores[k], legs, function, epoch=epoch,
             )
         return self.cores, vmat
 
-    def _core_update(self, skel_core: Grid, leg_grids: list[Grid], function: callable):
+    def _core_update(self, skel_core: Grid, leg_grids: list[Grid], function: callable, **kwargs) -> tuple[Grid, np.ndarray]:
         """
         Cross-update one triple-junction:
           1) create_mutations_multi on 3 legs
@@ -395,7 +407,7 @@ class MatrixTrainOptimization(Model):
         Returns new_core and cost-matrix
         """
         candidates, _ = create_mutations_multi(skel_core, leg_grids)
-        vals = candidates.evaluate(function)
+        vals = candidates.evaluate(function, **kwargs)
         Ni = leg_grids[0].num_points()
         mat = vals.reshape(-1, Ni).T
         rows, cols = linear_sum_assignment(mat)
