@@ -4,7 +4,7 @@ Optimization routines for grid-based tensor approximations in PyQuTree.
 This module provides:
   - A base Model class defining the optimization API (sweep/optimize).
   - Utilities to evaluate grids of function values and select subsets via max-volume,
-    greedy, or Hungarian assignment methods (grid → matrix → grid).
+    greedy, or linear assignment methods (grid → matrix → grid).
   - Functions to generate candidate grids by "cross"-sampling one or multiple legs.
   - Two model implementations:
       * TensorRankOptimization: CP/Tensor-Rank optimizer.
@@ -137,7 +137,7 @@ def maxvol_selection(grid: Grid, V: callable, dim2: int, **kwargs):
 
 def assignment_selection(grid: Grid, V: callable, dim2: int, **kwargs):
     """
-    Select rows by solving a linear assignment (Hungarian) on the cost matrix.
+    Select rows by solving a linear assignment problem on the cost matrix.
 
     Args:
         grid: Grid of candidate points.
@@ -247,7 +247,7 @@ def column_labels(matrix: np.ndarray) -> np.ndarray:
 def greedy_with_group_assignment(matrix: np.ndarray,
                                  groups: np.ndarray) -> tuple[list[int], list[int]]:
     """
-    Run Hungarian assignment separately for each group of columns.
+    Run linear assignment poblem solver separately for each group of columns.
 
     Args:
       matrix: (R × C) cost matrix.
@@ -336,3 +336,70 @@ class TensorRankOptimization(Model):
                 epoch=epoch
             )
         return grid, vmat
+
+
+class MatrixTrainOptimization(Model):
+    """
+    Optimizer for an N-site Matrix Network.
+
+    After a sweep, returns:
+      cores: list of N-2 Grid objects, each shape (r x 3)
+      vmat : the final cost-matrix
+    """
+
+    def __init__(self, primitive_grids: list[Grid], r: int):
+        """
+        Args:
+          primitive_grids: list of N one-dimensional Grids (Ni x 1)
+          r: skeleton junction rank
+        """
+        self.primitives = primitive_grids
+        self.N = len(primitive_grids)
+        self.r = r
+
+        self.cores = [
+            random_grid_points(
+                [primitive_grids[k],
+                 primitive_grids[k+1],
+                 primitive_grids[k+2]],
+                r
+            ) for k in range(self.N - 2)
+        ]
+
+    def sweep(self, _grid, V: callable, epoch: int):
+        """
+        One left-to-right pass.
+
+        Returns:
+          cores, vmat
+        """
+        vmat = None
+
+        for k in range(self.N - 2):
+            legs = [
+                self.primitives[k],
+                self.primitives[k+1],
+                self.primitives[k+2]
+            ]
+            self.cores[k], vmat = self._core_update(
+                self.cores[k], legs, V
+            )
+        return self.cores, vmat
+
+    def _core_update(self, skel_core: Grid, leg_grids: list[Grid], V: callable):
+        """
+        Cross-update one triple-junction:
+          1) create_mutations_multi on 3 legs
+          2) evaluate -> flat array
+          3) reshape to (Ni x (r*...))
+          4) linear assignment select r rows
+        Returns new_core and cost-matrix
+        """
+        candidates, _ = create_mutations_multi(skel_core, leg_grids)
+        vals = candidates.evaluate(V)
+        Ni = leg_grids[0].num_points()
+        mat = vals.reshape(-1, Ni).T
+        rows, cols = linear_sum_assignment(mat)
+        idxs = np.ravel_multi_index((rows, cols), mat.shape)
+        new_coords = candidates.grid[idxs, :]
+        return Grid(new_coords, skel_core.coords), mat
