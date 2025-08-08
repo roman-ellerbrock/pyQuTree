@@ -421,7 +421,7 @@ class MatrixTrainOptimization(Model):
         """
         vmat = None
 
-        # fallback to TCP for a 3D case
+        # fallback to TRC for a 3D case
         if self.N == 3:
             for k in range(grid.num_coords()):
                 grid, vmat = variation_update(grid, self.primitive_grids[k], function, epoch=epoch)
