@@ -8,7 +8,7 @@ This module provides:
   - Functions to generate candidate grids by "cross"-sampling one or multiple legs.
   - Two model implementations:
       * TensorRankOptimization: CP/Tensor-Rank optimizer.
-      * MatrixTrainOptimization: General N-site matrix-train optimizer.
+      * MatrixTrainOptimization: General N-site Matrix-Train optimizer.
 '''
 
 import random
@@ -75,7 +75,7 @@ def evaluate_grid(grid: Grid, function: callable, dim2: int, **kwargs) -> np.nda
         dim2: Number of rows in the resulting matrix.
 
     Returns:
-        mat:   Numpy array shape (dim2, dim1).
+        vmat:   Numpy array shape (dim2, dim1).
     """
     vmat = grid.evaluate(function, **kwargs)
     dim1 = int(vmat.size / dim2)
@@ -127,12 +127,12 @@ def maxvol_selection(grid: Grid, function: callable, dim2: int, **kwargs):
 
     Returns:
         grid: Grid reduced to the selected rows.
-        mat:  The full evaluation matrix before selection.
+        vmat:  The full evaluation matrix before selection.
     """
-    mat = evaluate_grid(grid, function, dim2, **kwargs)
-    nidx, R = maxvol(mat)
+    vmat = evaluate_grid(grid, function, dim2, **kwargs)
+    nidx, R = maxvol(vmat)
     grid.grid = grid.grid[nidx, :]
-    return grid, mat
+    return grid, vmat
 
 
 def assignment_selection(grid: Grid, function: callable, dim2: int, **kwargs):
@@ -146,14 +146,14 @@ def assignment_selection(grid: Grid, function: callable, dim2: int, **kwargs):
 
     Returns:
         grid: Updated Grid with selected points.
-        mat:  Cost matrix used for assignment.
+        vmat:  Cost matrix used for assignment.
     """
-    mat = evaluate_grid(grid, function, dim2, **kwargs)
-    rows, cols = linear_sum_assignment(mat)
+    vmat = evaluate_grid(grid, function, dim2, **kwargs)
+    rows, cols = linear_sum_assignment(vmat)
     # map (row_i, col_j) back to flat index
-    idcs = np.ravel_multi_index((rows, cols), mat.shape)
+    idcs = np.ravel_multi_index((rows, cols), vmat.shape)
     grid.grid = grid.grid[idcs, :]
-    return grid, mat
+    return grid, vmat
 
 
 def rest(idx: list[int], grid: Grid) -> list[int]:
@@ -185,7 +185,7 @@ def greedy_selection(grid: Grid, function: callable, r: int, **kwargs):
     """
     vmat = evaluate_grid(grid, function, r, **kwargs)
     rows, cols = greedy_column_min(vmat)
-    idcs = np.ravel_multi_index((rows, cols), vmat.T.shape)
+    idcs = np.ravel_multi_index((cols, rows), vmat.shape)
     grid.grid = grid.grid[idcs, :]
     return grid, vmat
 
@@ -277,7 +277,7 @@ def group_assignment(grid: Grid, function: callable,
     """
     vmat = evaluate_grid(grid, function, r, **kwargs)
     rows, cols = greedy_with_group_assignment(vmat, groups)
-    idcs = np.ravel_multi_index((cols, rows), vmat.T.shape)
+    idcs = np.ravel_multi_index((rows, cols), vmat.shape)
     grid.grid = grid.grid[idcs, :]
     return grid, vmat
 
@@ -363,38 +363,42 @@ class MatrixTrainOptimization(Model):
         self.primitive_grids = primitive_grids
         self.N = len(primitive_grids)
         self.r = r
-
-        self.cores = [
-            random_grid_points(
-                [primitive_grids[k],
-                 primitive_grids[k+1],
-                 primitive_grids[k+2]],
-                r
-            ) for k in range(self.N - 2)
-        ]
+        # Only build MT cores for N>=4; for N=3 we reduce to TRC exactly
+        if self.N >= 4:
+            self.cores = [
+                random_grid_points(
+                    [primitive_grids[k], primitive_grids[k+1], primitive_grids[k+2]],
+                    r
+                )
+                for k in range(self.N - 2)
+            ]
 
     def data(self, primitive_grids: list[Grid], r: int):
         self.primitive_grids = primitive_grids
         self.r = r
 
-    def sweep(self, _grid, function: callable, epoch: int):
+    def sweep(self, grid, function: callable, epoch: int):
         """
         One left-to-right pass.
 
         Returns:
           cores, vmat
         """
+
         vmat = None
+        if self.N == 3:
+            for k in range(3):
+                grid, vmat = variation_update(
+                    grid,
+                    self.primitive_grids[k],
+                    function,
+                    epoch=epoch,
+                )
+            return grid, vmat
 
         for k in range(self.N - 2):
-            legs = [
-                self.primitive_grids[k],
-                self.primitive_grids[k+1],
-                self.primitive_grids[k+2]
-            ]
-            self.cores[k], vmat = self._core_update(
-                self.cores[k], legs, function, epoch=epoch,
-            )
+            legs = [self.primitive_grids[k], self.primitive_grids[k+1], self.primitive_grids[k+2]]
+            self.cores[k], vmat = self._core_update(self.cores[k], legs, function, epoch=epoch)
         return self.cores, vmat
 
     def _core_update(self, skel_core: Grid, leg_grids: list[Grid], function: callable, **kwargs) -> tuple[Grid, np.ndarray]:
@@ -409,8 +413,8 @@ class MatrixTrainOptimization(Model):
         candidates, _ = create_mutations_multi(skel_core, leg_grids)
         vals = candidates.evaluate(function, **kwargs)
         Ni = leg_grids[0].num_points()
-        mat = vals.reshape(-1, Ni).T
-        rows, cols = linear_sum_assignment(mat)
-        idxs = np.ravel_multi_index((rows, cols), mat.shape)
+        vmat = vals.reshape(-1, Ni).T
+        rows, cols = linear_sum_assignment(vmat)
+        idxs = np.ravel_multi_index((rows, cols), vmat.shape)
         new_coords = candidates.grid[idxs, :]
-        return Grid(new_coords, skel_core.coords), mat
+        return Grid(new_coords, skel_core.coords), vmat
