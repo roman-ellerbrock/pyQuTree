@@ -1,4 +1,4 @@
-'''
+"""
 Optimization routines for grid-based tensor approximations in PyQuTree.
 
 This module provides:
@@ -9,7 +9,7 @@ This module provides:
   - Two model implementations:
       * TensorRankOptimization: CP/Tensor-Rank optimizer.
       * MatrixTrainOptimization: General N-site Matrix-Train optimizer.
-'''
+"""
 
 import random
 import itertools
@@ -185,7 +185,7 @@ def greedy_selection(grid: Grid, function: callable, r: int, **kwargs):
     """
     vmat = evaluate_grid(grid, function, r, **kwargs)
     rows, cols = greedy_column_min(vmat)
-    idcs = np.ravel_multi_index((cols, rows), vmat.shape)
+    idcs = np.ravel_multi_index((rows, cols), vmat.shape)
     grid.grid = grid.grid[idcs, :]
     return grid, vmat
 
@@ -412,29 +412,32 @@ class MatrixTrainOptimization(Model):
         self.primitive_grids = primitive_grids
         self.r = r
 
-    def sweep(self, grid, function: callable, epoch: int):
+    def sweep(self, grid: Grid, function: callable, epoch: int):
         """
         One left-to-right pass.
 
         Returns:
           cores, vmat
         """
-
         vmat = None
+
+        # fallback to TCP for a 3D case
         if self.N == 3:
-            for k in range(3):
-                grid, vmat = variation_update(
-                    grid,
-                    self.primitive_grids[k],
-                    function,
-                    epoch=epoch,
-                )
+            for k in range(grid.num_coords()):
+                grid, vmat = variation_update(grid, self.primitive_grids[k], function, epoch=epoch)
             return grid, vmat
 
-        for k in range(self.N - 2):
-            legs = [self.primitive_grids[k], self.primitive_grids[k+1], self.primitive_grids[k+2]]
-            self.cores[k], vmat = self._core_update(self.cores[k], legs, function, epoch=epoch)
-        return self.cores, vmat
+        f = grid.num_coords()
+
+        for k in range(3):
+            grid, _ = variation_update(grid, self.primitive_grids[k], function, epoch=epoch)
+        for k in range(2, f-1):
+            left_block = list(range(k))
+            grid, _    = recombination_update_assignment(grid, left_block, function, epoch=epoch)
+            grid, vmat = variation_update(grid, self.primitive_grids[k+1], function, epoch=epoch)
+
+        return grid, vmat
+
 
     def _core_update(self, skel_core: Grid, leg_grids: list[Grid], function: callable, **kwargs) -> tuple[Grid, np.ndarray]:
         """
