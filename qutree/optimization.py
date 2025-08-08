@@ -417,7 +417,7 @@ class MatrixTrainOptimization(Model):
         One left-to-right pass.
 
         Returns:
-          cores, vmat
+          grid, vmat
         """
         vmat = None
 
