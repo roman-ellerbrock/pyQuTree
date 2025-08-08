@@ -398,15 +398,6 @@ class MatrixTrainOptimization(Model):
         self.primitive_grids = primitive_grids
         self.N = len(primitive_grids)
         self.r = r
-        # Only build MT cores for N>=4; for N=3 we reduce to TRC exactly
-        if self.N >= 4:
-            self.cores = [
-                random_grid_points(
-                    [primitive_grids[k], primitive_grids[k+1], primitive_grids[k+2]],
-                    r
-                )
-                for k in range(self.N - 2)
-            ]
 
     def data(self, primitive_grids: list[Grid], r: int):
         self.primitive_grids = primitive_grids
@@ -421,7 +412,7 @@ class MatrixTrainOptimization(Model):
         """
         vmat = None
 
-        # fallback to TRC for a 3D case
+        # fallback to TensorRankOptimization for a 3D case
         if self.N == 3:
             for k in range(grid.num_coords()):
                 grid, vmat = variation_update(grid, self.primitive_grids[k], function, epoch=epoch)
@@ -437,22 +428,3 @@ class MatrixTrainOptimization(Model):
             grid, vmat = variation_update(grid, self.primitive_grids[k+1], function, epoch=epoch)
 
         return grid, vmat
-
-
-    def _core_update(self, skel_core: Grid, leg_grids: list[Grid], function: callable, **kwargs) -> tuple[Grid, np.ndarray]:
-        """
-        Cross-update one triple-junction:
-          1) create_mutations_multi on 3 legs
-          2) evaluate -> flat array
-          3) reshape to (Ni x (r*...))
-          4) linear assignment select r rows
-        Returns new_core and cost-matrix
-        """
-        candidates, _ = create_mutations_multi(skel_core, leg_grids)
-        vals = candidates.evaluate(function, **kwargs)
-        Ni = leg_grids[0].num_points()
-        vmat = vals.reshape(-1, Ni).T
-        rows, cols = linear_sum_assignment(vmat)
-        idxs = np.ravel_multi_index((rows, cols), vmat.shape)
-        new_coords = candidates.grid[idxs, :]
-        return Grid(new_coords, skel_core.coords), vmat
