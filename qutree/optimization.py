@@ -244,8 +244,10 @@ def column_labels(matrix: np.ndarray) -> np.ndarray:
     return labels
 
 
-def greedy_with_group_assignment(matrix: np.ndarray,
-                                 groups: np.ndarray) -> tuple[list[int], list[int]]:
+def greedy_with_group_assignment(
+    matrix: np.ndarray,
+    groups: np.ndarray
+) -> tuple[list[int], list[int]]:
     """
     Run linear assignment poblem solver separately for each group of columns.
 
@@ -266,8 +268,13 @@ def greedy_with_group_assignment(matrix: np.ndarray,
     return list(selected_rows), list(range(matrix.shape[1]))
 
 
-def group_assignment(grid: Grid, function: callable,
-                     groups: np.ndarray, r: int, **kwargs):
+def group_assignment(
+    grid: Grid,
+    function: callable,
+    groups: np.ndarray,
+    r: int,
+    **kwargs
+):
     """
     Grouped selection: select one row per column group via greedy_with_group_assignment.
 
@@ -282,8 +289,12 @@ def group_assignment(grid: Grid, function: callable,
     return grid, vmat
 
 
-def variation_update(grid: Grid, replacement_grid: Grid,
-                     function: callable, **kwargs) -> tuple[Grid, np.ndarray]:
+def variation_update(
+    grid: Grid,
+    replacement_grid: Grid,
+    function: callable,
+    **kwargs
+) -> tuple[Grid, np.ndarray]:
     """
     One cross-update on a single physical leg:
       grid --create_mutations--> candidates
@@ -294,13 +305,37 @@ def variation_update(grid: Grid, replacement_grid: Grid,
     return group_assignment(ngrid, function, groups, replacement_grid.num_points(), **kwargs)
 
 
-def recombination_update(grid: Grid, idxs: list[int],
-                         function: callable, **kwargs) -> tuple[Grid, np.ndarray]:
+def recombination_update(
+    grid: Grid,
+    idxs: list[int],
+    function: callable,
+    **kwargs
+) -> tuple[Grid, np.ndarray]:
     """
     Recombine two subsets via max-volume selection.
     """
     ngrid = recombination(grid, idxs)
     return maxvol_selection(ngrid, function, grid.num_points(), **kwargs)
+
+
+def recombination_update_assignment(
+    grid: Grid,
+    left_block_cols: list[int],
+    function: callable,
+    **kwargs
+):
+    """
+    Recombine two blocks A (columns=left_block_cols) and B (the rest).
+    - cartesian_product(A,B) -> candidate grid with r*r rows
+    - evaluate -> r x r cost matrix (rows=r 'slots', cols=r candidates)
+    - Hungarian assignment -> pick r rows for the next grid
+
+    Returns:
+      new_grid, vmat  with vmat.shape == (r, r)
+    """
+    ngrid = recombination(grid, left_block_cols)  # r^2 x f
+    new_grid, vmat = assignment_selection(ngrid, function, dim2=grid.num_points(), **kwargs)
+    return new_grid, vmat
 
 
 class TensorRankOptimization(Model):
