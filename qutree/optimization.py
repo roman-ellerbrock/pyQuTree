@@ -13,6 +13,7 @@ This module provides:
 
 import random
 import itertools
+from typing import Callable
 
 import numpy as np
 from scipy.optimize import linear_sum_assignment
@@ -33,7 +34,7 @@ class Model:
     def __init__(self):
         pass
 
-    def sweep(self, grid: Grid, function: callable, epoch: int):
+    def sweep(self, grid: Grid, function: Callable, epoch: int):
         """
         Perform one pass of the optimization.
         Should be implemented by subclasses.
@@ -48,7 +49,7 @@ class Model:
             aux_data: Optional auxiliary output (e.g. evaluation matrix).
         """
 
-    def optimize(self, grid: Grid, function: callable, num_epochs: int) -> Grid:
+    def optimize(self, grid: Grid, function: Callable, num_epochs: int) -> Grid:
         """
         Run `sweep` for `n_epochs` iterations starting from `grid`.
 
@@ -65,7 +66,7 @@ class Model:
         return grid
 
 
-def evaluate_grid(grid: Grid, function: callable, dim2: int, **kwargs) -> np.ndarray:
+def evaluate_grid(grid: Grid, function: Callable, dim2: int, **kwargs) -> np.ndarray:
     """
     Evaluate `function` on each point in `grid`, then reshape to a (dim2 x dim1) matrix.
 
@@ -119,7 +120,7 @@ def random_grid_points(primitive_grids: list[Grid], r: int) -> Grid:
     return Grid(coords, list(range(f)))
 
 
-def maxvol_selection(grid: Grid, function: callable, dim2: int, **kwargs):
+def maxvol_selection(grid: Grid, function: Callable, dim2: int, **kwargs):
     """
     Select rows of the (dim2 x dim1) evaluation matrix that maximize volume.
 
@@ -135,7 +136,7 @@ def maxvol_selection(grid: Grid, function: callable, dim2: int, **kwargs):
     return grid, vmat
 
 
-def assignment_selection(grid: Grid, function: callable, dim2: int, **kwargs):
+def assignment_selection(grid: Grid, function: Callable, dim2: int, **kwargs):
     """
     Select rows by solving a linear assignment problem on the cost matrix.
 
@@ -175,7 +176,7 @@ def greedy_column_min(matrix: np.ndarray) -> tuple[list[int], list[int]]:
     return rows, cols
 
 
-def greedy_selection(grid: Grid, function: callable, r: int, **kwargs):
+def greedy_selection(grid: Grid, function: Callable, r: int, **kwargs):
     """
     Select grid points by choosing minimum in each column.
 
@@ -270,7 +271,7 @@ def greedy_with_group_assignment(
 
 def group_assignment(
     grid: Grid,
-    function: callable,
+    function: Callable,
     groups: np.ndarray,
     r: int,
     **kwargs
@@ -292,7 +293,7 @@ def group_assignment(
 def variation_update(
     grid: Grid,
     replacement_grid: Grid,
-    function: callable,
+    function: Callable,
     **kwargs
 ) -> tuple[Grid, np.ndarray]:
     """
@@ -308,7 +309,7 @@ def variation_update(
 def recombination_update(
     grid: Grid,
     idxs: list[int],
-    function: callable,
+    function: Callable,
     **kwargs
 ) -> tuple[Grid, np.ndarray]:
     """
@@ -321,7 +322,7 @@ def recombination_update(
 def recombination_update_assignment(
     grid: Grid,
     left_block_cols: list[int],
-    function: callable,
+    function: Callable,
     **kwargs
 ):
     """
@@ -359,14 +360,16 @@ class TensorRankOptimization(Model):
         self.primitive_grids = primitive_grids
         self.r = r
 
-    def sweep(self, grid: Grid, function: callable, epoch: int):
+    def sweep(self, grid: Grid, function: Callable, epoch: int):
         """
         One sweep: for each dimension k, perform `variation_update`.
 
         Returns:
           (new_grid, last_vmat)
         """
-        for k in range(grid.num_coords()):
+        vmat = None
+        f = grid.num_coords()
+        for k in range(f):
             grid, vmat = variation_update(
                 grid,
                 self.primitive_grids[k],
@@ -403,28 +406,20 @@ class MatrixTrainOptimization(Model):
         self.primitive_grids = primitive_grids
         self.r = r
 
-    def sweep(self, grid: Grid, function: callable, epoch: int):
-        """
-        One left-to-right pass.
-
-        Returns:
-          grid, vmat
-        """
+    def sweep(self, grid: Grid, function: Callable, epoch: int):
         vmat = None
-
-        # fallback to TensorRankOptimization for a 3D case
-        if self.N == 3:
-            for k in range(grid.num_coords()):
-                grid, vmat = variation_update(grid, self.primitive_grids[k], function, epoch=epoch)
-            return grid, vmat
-
         f = grid.num_coords()
 
-        for k in range(3):
+        for k in range(min(3, f)):
             grid, _ = variation_update(grid, self.primitive_grids[k], function, epoch=epoch)
-        for k in range(2, f-1):
+
+        for k in range(3, f):
             left_block = list(range(k))
-            grid, _    = recombination_update_assignment(grid, left_block, function, epoch=epoch)
-            grid, vmat = variation_update(grid, self.primitive_grids[k+1], function, epoch=epoch)
+            grid, vmat    = recombination_update_assignment(grid, left_block, function, epoch=epoch)
+            grid, vmat = variation_update(grid, self.primitive_grids[k], function, epoch=epoch)
+
+        if f>3:
+            for k in range(f-3, f):
+                grid, vmat = variation_update(grid, self.primitive_grids[k], function, epoch=epoch)
 
         return grid, vmat
