@@ -130,3 +130,5 @@ def compare_all(D, N, r, nsweep, seed):
 
 df_results = compare_all(D=5, N=11, r=8, nsweep=6, seed=0)
 print(df_results)
+# error vs num_calls (different ranks) #TODO
+# linear sum assignment with multiple segments #TODO

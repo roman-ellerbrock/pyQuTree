@@ -83,24 +83,26 @@ def evaluate_grid(grid: Grid, function: Callable, dim2: int, **kwargs) -> np.nda
     return vmat.reshape(dim1, dim2).T
 
 
-def random_points(primitive_grid: list[Grid], r: int) -> np.ndarray:
+def random_points(primitive_grid: list[Grid], r: int, seed:int=42) -> np.ndarray:
     """
     Sample r random points from each 1D primitive, returning an (r x f) array.
     """
+    random.seed(seed)
     x = []
     for g in primitive_grid:
-        pts = random.sample(list(g.grid.flatten()), r)
+        pts = random.sample(list(g.grid.flatten()), r, seed=seed)
         x.append(pts)
     return np.array(x).T
 
 
-def random_grid_points(primitive_grids: list[Grid], r: int) -> Grid:
+def random_grid_points(primitive_grids: list[Grid], r: int, seed:int=42) -> Grid:
     """
     Sample r unique points from the full Cartesian product of f primitives.
 
     Returns:
       Grid of shape (r x f) with coords [0..f-1].
     """
+    random.seed(seed)
     def unique_integer_arrays(r, N, f):
         if r > N**f:
             raise ValueError("Not enough unique combos.")
