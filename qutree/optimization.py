@@ -287,7 +287,7 @@ def group_assignment(
     """
     vmat = evaluate_grid(grid, function, r, **kwargs)
     rows, cols = greedy_with_group_assignment(vmat, groups)
-    idcs = np.ravel_multi_index((rows, cols), vmat.shape)
+    idcs = np.ravel_multi_index((cols, rows), vmat.T.shape)
     grid.grid = grid.grid[idcs, :]
     return grid, vmat
 
@@ -372,12 +372,7 @@ class TensorRankOptimization(Model):
         vmat = None
         f = grid.num_coords()
         for k in range(f):
-            grid, vmat = variation_update(
-                grid,
-                self.primitive_grids[k],
-                function,
-                epoch=epoch
-            )
+            grid, vmat = variation_update(grid, self.primitive_grids[k], function, epoch=epoch)
         return grid, vmat
 
 
@@ -412,16 +407,16 @@ class MatrixTrainOptimization(Model):
         vmat = None
         f = grid.num_coords()
 
-        for k in range(min(3, f)):
+        for k in range(min(2, f)):
             grid, _ = variation_update(grid, self.primitive_grids[k], function, epoch=epoch)
 
-        for k in range(3, f):
+        for k in range(2, f-1):
             left_block = list(range(k))
             grid, vmat    = recombination_update_assignment(grid, left_block, function, epoch=epoch)
             grid, vmat = variation_update(grid, self.primitive_grids[k], function, epoch=epoch)
 
         if f>3:
-            for k in range(f-3, f):
+            for k in range(f-1, f):
                 grid, vmat = variation_update(grid, self.primitive_grids[k], function, epoch=epoch)
 
         return grid, vmat

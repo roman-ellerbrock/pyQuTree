@@ -53,7 +53,8 @@ def make_primitives(bounds, N):
 def run_trc(func, bounds, D, N, r, nsweep, seed=0):
     np.random.seed(seed)
     primitives = make_primitives(bounds, N)
-    obj = Objective(func)
+    #obj = Objective(func)
+    obj = Objective(func, lambda x: -np.exp(-x))
     model = TensorRankOptimization(primitives, r)
     grid0 = random_grid_points(primitives, r)
     grid = model.optimize(grid0, obj, nsweep)
@@ -64,7 +65,8 @@ def run_trc(func, bounds, D, N, r, nsweep, seed=0):
 def run_mt(func, bounds, D, N, r, nsweep, seed=0):
     np.random.seed(seed)
     primitives = make_primitives(bounds, N)
-    obj = Objective(func)
+    #obj = Objective(func)
+    obj = Objective(func, lambda x: -np.exp(-x))
     model = MatrixTrainOptimization(primitives, r)
     grid0 = random_grid_points(primitives, r)
     grid = model.optimize(grid0, obj, nsweep)
@@ -75,7 +77,8 @@ def run_mt(func, bounds, D, N, r, nsweep, seed=0):
 def run_ttopt(func, bounds, D, N, r, nsweep, seed=0):
     np.random.seed(seed)
     f = len(bounds)
-    obj = Objective(func)
+    #obj = Objective(func)
+    obj = Objective(func, lambda x: np.exp(-x))
     G = tensor_train_graph(f, r, N)
     primitive_grid = [np.linspace(lo, hi, N, endpoint=True) for (lo, hi) in bounds]
     _ = ttnopt(G, obj, nsweep, primitive_grid)
@@ -128,7 +131,7 @@ def compare_all(D, N, r, nsweep, seed):
     return df
 
 
-df_results = compare_all(D=5, N=11, r=8, nsweep=6, seed=0)
+df_results = compare_all(D=5, N=11, r=3, nsweep=6, seed=0)
 print(df_results)
 # error vs num_calls (different ranks) #TODO
 # linear sum assignment with multiple segments #TODO
