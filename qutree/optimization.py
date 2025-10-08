@@ -266,6 +266,7 @@ def greedy_with_group_assignment(
     selected_rows = np.full(matrix.shape[1], -1)
     for g in set(groups):
         cols_g = np.flatnonzero(groups == g)
+        # @todo: first make maxvol inside a group submatrix and then do linear sum assignment inside the maxvol matrix
         rows_g, cols_sub = linear_sum_assignment(matrix[:, cols_g])
         selected_rows[cols_g[cols_sub]] = rows_g
     return list(selected_rows), list(range(matrix.shape[1]))

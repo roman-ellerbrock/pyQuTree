@@ -45,6 +45,10 @@ def exp_neg_norm2(x):
     x = np.asarray(x)
     return -np.exp(-np.sum(x**2))
 
+def rosenbrock(x, a=1.0, b=100.0):
+    x = np.asarray(x, dtype=float)
+    return np.sum(b * (x[1:] - x[:-1]**2)**2 + (a - x[:-1])**2)
+
 
 # helpers
 def make_primitives(bounds, N):
@@ -56,7 +60,7 @@ def run_trc(func, bounds, D, N, r, nsweep, seed=0):
     #obj = Objective(func)
     obj = Objective(func, lambda x: -np.exp(-x))
     model = TensorRankOptimization(primitives, r)
-    grid0 = random_grid_points(primitives, r)
+    grid0 = random_grid_points(primitives, r, seed)
     grid = model.optimize(grid0, obj, nsweep)
     calls = obj.function_calls
     f_min = float(np.min(obj.logger.df['f'])) if len(obj.logger.df) else np.nan
@@ -68,7 +72,7 @@ def run_mt(func, bounds, D, N, r, nsweep, seed=0):
     #obj = Objective(func)
     obj = Objective(func, lambda x: -np.exp(-x))
     model = MatrixTrainOptimization(primitives, r)
-    grid0 = random_grid_points(primitives, r)
+    grid0 = random_grid_points(primitives, r, seed)
     grid = model.optimize(grid0, obj, nsweep)
     calls = obj.function_calls
     f_min = float(np.min(obj.logger.df['f'])) if len(obj.logger.df) else np.nan
@@ -90,16 +94,17 @@ def run_ttopt(func, bounds, D, N, r, nsweep, seed=0):
 # main
 def compare_all(D, N, r, nsweep, seed):
     tests = [
-        ("Ackley", ackley, [(-32.768, 32.768)]*D),
-        ("Alpine", alpine1, [(-10.0, 10.0)]*D),
-        ("Brown",  brown,  [(-1.0, 4.0)]*D),
-        ("Exponential", exp_neg_norm2, [(-1.0, 1.0)]*D),
+        # ("Ackley", ackley, [(-32.768, 32.768)]*D),
+        # ("Alpine", alpine1, [(-10.0, 10.0)]*D),
+        # ("Brown",  brown,  [(-1.0, 4.0)]*D),
+        # ("Exponential", exp_neg_norm2, [(-1.0, 1.0)]*D),
+        ("Rosenbrock", rosenbrock, [(-0.0, 2.0)]*D),
     ]
     rows = []
     for name, f, bounds in tests:
-        trc_calls, trc_min, _ = run_trc(f, bounds, D, N, r, nsweep, seed)
-        mt_calls,  mt_min,  _ = run_mt(f, bounds, D, N, r, nsweep, seed)
-        tt_calls,  tt_min,  _ = run_ttopt(f, bounds, D, N, r, nsweep, seed)
+        trc_calls, trc_min, obj_trc = run_trc(f, bounds, D, N, r, nsweep, seed)
+        mt_calls,  mt_min,  obj_mt = run_mt(f, bounds, D, N, r, nsweep, seed)
+        tt_calls,  tt_min,  obj_tt = run_ttopt(f, bounds, D, N, r, nsweep, seed)
 
         rows.append(
             {
@@ -126,12 +131,16 @@ def compare_all(D, N, r, nsweep, seed):
                     "best f": tt_min
                 }
             )
+        
+        # if name == "Rosenbrock":
+        #     print(obj_trc)
+        #     print(obj_tt)
 
     df = pd.DataFrame(rows).sort_values(["Function", "Method"]).reset_index(drop=True)
     return df
 
 
-df_results = compare_all(D=5, N=11, r=3, nsweep=6, seed=0)
+df_results = compare_all(D=5, N=11, r=3, nsweep=6, seed=2)
 print(df_results)
 # error vs num_calls (different ranks) #TODO
 # linear sum assignment with multiple segments #TODO
