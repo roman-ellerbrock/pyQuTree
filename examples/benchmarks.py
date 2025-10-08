@@ -92,7 +92,7 @@ def run_ttopt(func, bounds, D, N, r, nsweep, seed=0):
 
 
 # main
-def compare_all(D, N, r, nsweep, seed):
+def compare_all(D, N, r, nsweep, seeds):
     tests = [
         # ("Ackley", ackley, [(-32.768, 32.768)]*D),
         # ("Alpine", alpine1, [(-10.0, 10.0)]*D),
@@ -101,46 +101,53 @@ def compare_all(D, N, r, nsweep, seed):
         ("Rosenbrock", rosenbrock, [(-0.0, 2.0)]*D),
     ]
     rows = []
-    for name, f, bounds in tests:
-        trc_calls, trc_min, obj_trc = run_trc(f, bounds, D, N, r, nsweep, seed)
-        mt_calls,  mt_min,  obj_mt = run_mt(f, bounds, D, N, r, nsweep, seed)
-        tt_calls,  tt_min,  obj_tt = run_ttopt(f, bounds, D, N, r, nsweep, seed)
+    for seed in seeds:
+        for name, f, bounds in tests:
+            trc_calls, trc_min, obj_trc = run_trc(f, bounds, D, N, r, nsweep, seed)
+            mt_calls,  mt_min,  obj_mt = run_mt(f, bounds, D, N, r, nsweep, seed)
+            tt_calls,  tt_min,  obj_tt = run_ttopt(f, bounds, D, N, r, nsweep, seed)
 
-        rows.append(
-            {
-                "Function": name,
-                "Method": "TRC",
-                "Objective calls": trc_calls,
-                "best f": trc_min
-            }
-        )
-        rows.append(
-            {
-                "Function": name,
-                "Method": "MatrixTrain",
-                "Objective calls": mt_calls,
-                "best f": mt_min
-            }
-        )
-        if tt_calls is not None:
             rows.append(
                 {
                     "Function": name,
-                    "Method": "TTOpt",
-                    "Objective calls": tt_calls,
-                    "best f": tt_min
+                    "Method": "TRC",
+                    "Seed": seed,
+                    "Rank": r,
+                    "Objective calls": trc_calls,
+                    "best f": trc_min
                 }
             )
-        
+            rows.append(
+                {
+                    "Function": name,
+                    "Method": "MatrixTrain",
+                    "Seed": seed,
+                    "Rank": r,
+                    "Objective calls": mt_calls,
+                    "best f": mt_min
+                }
+            )
+            if tt_calls is not None:
+                rows.append(
+                    {
+                        "Function": name,
+                        "Method": "TTOpt",
+                        "Seed": seed,
+                        "Rank": r,
+                        "Objective calls": tt_calls,
+                        "best f": tt_min
+                    }
+                )
+
         # if name == "Rosenbrock":
         #     print(obj_trc)
         #     print(obj_tt)
 
-    df = pd.DataFrame(rows).sort_values(["Function", "Method"]).reset_index(drop=True)
+    df = pd.DataFrame(rows).sort_values(["Function", "Method", "Seed"]).reset_index(drop=True)
     return df
 
 
-df_results = compare_all(D=5, N=11, r=3, nsweep=6, seed=2)
+df_results = compare_all(D=5, N=11, r=3, nsweep=6, seeds=range(10))
 print(df_results)
 # error vs num_calls (different ranks) #TODO
 # linear sum assignment with multiple segments #TODO
