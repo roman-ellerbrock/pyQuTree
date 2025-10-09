@@ -49,6 +49,47 @@ def rosenbrock(x, a=1.0, b=100.0):
     x = np.asarray(x, dtype=float)
     return np.sum(b * (x[1:] - x[:-1]**2)**2 + (a - x[:-1])**2)
 
+def multi_well(x, m=5, seed=42):
+    """
+    Linear combination of m student-t wells with negative coefficients and different heights.
+
+    Creates local minima distributed throughout the space. Each well has a different
+    amplitude (height) so they can be distinguished by a minimizer.
+
+    Parameters:
+    - x: input vector
+    - m: number of wells (default 5)
+    - seed: random seed for reproducible well placement
+
+    Domain: [-5, 5]^D recommended
+    Global minimum: 0
+    """
+    x = np.asarray(x)
+    D = x.size
+    df = 3  # degrees of freedom for student-t distribution
+
+    # Use a fixed random state for reproducible centers
+    rng = np.random.RandomState(seed)
+
+    # Linear combination of wells
+    total = 0.0
+    max_depth = 0.0  # Track deepest well to offset function
+
+    for i in range(m):
+        # Set centers randomly in domain [-4, 4] (slightly inside [-5, 5])
+        center = rng.uniform(-4.0, 4.0, size=D)
+
+        # Different amplitudes for each well (increasing depth)
+        amplitude = 0.5 + 1.5 * (i + 1) / m
+
+        # Student-t distribution with negative coefficient to create a well
+        dist_sq = np.sum((x - center)**2)
+        well_value = -amplitude / (1.0 + dist_sq / df) ** ((df + D) / 2.0)
+        total += well_value
+
+    # Offset so global minimum is 0
+    return total - max_depth
+
 
 # helpers
 def make_primitives(bounds, N):
@@ -92,62 +133,65 @@ def run_ttopt(func, bounds, D, N, r, nsweep, seed=0):
 
 
 # main
-def compare_all(D, N, r, nsweep, seeds):
+def compare_all(D, N, ranks, nsweep, seeds):
     tests = [
         # ("Ackley", ackley, [(-32.768, 32.768)]*D),
         # ("Alpine", alpine1, [(-10.0, 10.0)]*D),
         # ("Brown",  brown,  [(-1.0, 4.0)]*D),
         # ("Exponential", exp_neg_norm2, [(-1.0, 1.0)]*D),
-        ("Rosenbrock", rosenbrock, [(-0.0, 2.0)]*D),
+        # ("Rosenbrock", rosenbrock, [(-0.0, 2.0)]*D),
+        ("MultiWell", multi_well, [(-5.0, 5.0)]*D),
     ]
     rows = []
-    for seed in seeds:
-        for name, f, bounds in tests:
-            trc_calls, trc_min, obj_trc = run_trc(f, bounds, D, N, r, nsweep, seed)
-            mt_calls,  mt_min,  obj_mt = run_mt(f, bounds, D, N, r, nsweep, seed)
-            tt_calls,  tt_min,  obj_tt = run_ttopt(f, bounds, D, N, r, nsweep, seed)
+    for r in ranks:
+        for seed in seeds:
+            for name, f, bounds in tests:
+                trc_calls, trc_min, obj_trc = run_trc(f, bounds, D, N, r, nsweep, seed)
+                mt_calls,  mt_min,  obj_mt = run_mt(f, bounds, D, N, r, nsweep, seed)
+                tt_calls,  tt_min,  obj_tt = run_ttopt(f, bounds, D, N, r, nsweep, seed)
 
-            rows.append(
-                {
-                    "Function": name,
-                    "Method": "TRC",
-                    "Seed": seed,
-                    "Rank": r,
-                    "Objective calls": trc_calls,
-                    "best f": trc_min
-                }
-            )
-            rows.append(
-                {
-                    "Function": name,
-                    "Method": "MatrixTrain",
-                    "Seed": seed,
-                    "Rank": r,
-                    "Objective calls": mt_calls,
-                    "best f": mt_min
-                }
-            )
-            if tt_calls is not None:
                 rows.append(
                     {
                         "Function": name,
-                        "Method": "TTOpt",
-                        "Seed": seed,
+                        "Method": "TRC",
                         "Rank": r,
-                        "Objective calls": tt_calls,
-                        "best f": tt_min
+                        "Seed": seed,
+                        "Objective calls": trc_calls,
+                        "best_f": trc_min
                     }
                 )
+                rows.append(
+                    {
+                        "Function": name,
+                        "Method": "MatrixTrain",
+                        "Rank": r,
+                        "Seed": seed,
+                        "Objective calls": mt_calls,
+                        "best_f": mt_min
+                    }
+                )
+                if tt_calls is not None:
+                    rows.append(
+                        {
+                            "Function": name,
+                            "Method": "TTOpt",
+                            "Rank": r,
+                            "Seed": seed,
+                            "Objective calls": tt_calls,
+                            "best_f": tt_min
+                        }
+                    )
 
-        # if name == "Rosenbrock":
-        #     print(obj_trc)
-        #     print(obj_tt)
+            # if name == "Rosenbrock":
+            #     print(obj_trc)
+            #     print(obj_tt)
 
-    df = pd.DataFrame(rows).sort_values(["Function", "Method", "Seed"]).reset_index(drop=True)
+    df = pd.DataFrame(rows).sort_values(["Function", "Method", "Rank", "Seed"]).reset_index(drop=True)
     return df
 
 
-df_results = compare_all(D=5, N=11, r=3, nsweep=6, seeds=range(10))
+df_results = compare_all(D=5, N=11, ranks=range(1, 6), nsweep=6, seeds=range(50))
+df_results.to_csv("results.csv")
 print(df_results)
 # error vs num_calls (different ranks) #TODO
 # linear sum assignment with multiple segments #TODO
