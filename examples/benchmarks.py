@@ -49,7 +49,7 @@ def rosenbrock(x, a=1.0, b=100.0):
     x = np.asarray(x, dtype=float)
     return np.sum(b * (x[1:] - x[:-1]**2)**2 + (a - x[:-1])**2)
 
-def multi_well(x, m=5, seed=42):
+def multi_well(x, seed=42):
     """
     Linear combination of m student-t wells with negative coefficients and different heights.
 
@@ -66,7 +66,8 @@ def multi_well(x, m=5, seed=42):
     """
     x = np.asarray(x)
     D = x.size
-    df = 3  # degrees of freedom for student-t distribution
+    df = D  # degrees of freedom for student-t distribution
+    m = D
 
     # Use a fixed random state for reproducible centers
     rng = np.random.RandomState(seed)
@@ -144,6 +145,7 @@ def compare_all(D, N, ranks, nsweep, seeds):
     ]
     rows = []
     for r in ranks:
+        print(f" = {r} / {ranks[-1]}")
         for seed in seeds:
             for name, f, bounds in tests:
                 trc_calls, trc_min, obj_trc = run_trc(f, bounds, D, N, r, nsweep, seed)
@@ -190,7 +192,7 @@ def compare_all(D, N, ranks, nsweep, seeds):
     return df
 
 
-df_results = compare_all(D=5, N=11, ranks=range(1, 6), nsweep=6, seeds=range(50))
+df_results = compare_all(D=10, N=11, ranks=range(1, 8), nsweep=6, seeds=range(10))
 df_results.to_csv("results.csv")
 print(df_results)
 # error vs num_calls (different ranks) #TODO

@@ -95,31 +95,57 @@ def random_points(primitive_grid: list[Grid], r: int, seed:int=42) -> np.ndarray
     return np.array(x).T
 
 
-def random_grid_points(primitive_grids: list[Grid], r: int, seed:int=42) -> Grid:
-    """
-    Sample r unique points from the full Cartesian product of f primitives.
+# def random_grid_points(primitive_grids: list[Grid], r: int, seed:int=42) -> Grid:
+#     """
+#     Sample r unique points from the full Cartesian product of f primitives.
 
-    Returns:
-      Grid of shape (r x f) with coords [0..f-1].
-    """
+#     Returns:
+#       Grid of shape (r x f) with coords [0..f-1].
+#     """
+#     random.seed(seed)
+#     def unique_integer_arrays(r, N, f):
+#         if r > N**f:
+#             raise ValueError("Not enough unique combos.")
+#         return np.array(random.sample(
+#             list(itertools.product(range(N), repeat=f)), r))
+
+#     def indices_to_grid_points(idxs, grids):
+#         return np.array([
+#             [grids[d].grid[i, 0] for d, i in enumerate(pt)]
+#             for pt in idxs
+#         ])
+
+#     f = len(primitive_grids)
+#     N = primitive_grids[0].grid.shape[0]
+#     idcs = unique_integer_arrays(r, N, f)
+#     coords = indices_to_grid_points(idcs, primitive_grids)
+#     return Grid(coords, list(range(f)))
+
+def random_grid_points(primitive_grids: list[Grid], r: int, seed: int = 42) -> Grid:
     random.seed(seed)
-    def unique_integer_arrays(r, N, f):
-        if r > N**f:
-            raise ValueError("Not enough unique combos.")
-        return np.array(random.sample(
-            list(itertools.product(range(N), repeat=f)), r))
+    sizes = [g.grid.shape[0] for g in primitive_grids]
+    P = 1
+    for n in sizes: P *= n
+    if r > P:
+        raise ValueError("Not enough unique combos.")
 
-    def indices_to_grid_points(idxs, grids):
-        return np.array([
-            [grids[d].grid[i, 0] for d, i in enumerate(pt)]
-            for pt in idxs
-        ])
+    # sample r unique linear indices without materializing the full product
+    lin_idxs = random.sample(range(P), r)
 
-    f = len(primitive_grids)
-    N = primitive_grids[0].grid.shape[0]
-    idcs = unique_integer_arrays(r, N, f)
-    coords = indices_to_grid_points(idcs, primitive_grids)
-    return Grid(coords, list(range(f)))
+    # convert linear indices to mixed-radix indices
+    idcs = np.empty((r, len(sizes)), dtype=int)
+    for k, v0 in enumerate(lin_idxs):
+        v = v0
+        for d in range(len(sizes) - 1, -1, -1):
+            idcs[k, d] = v % sizes[d]
+            v //= sizes[d]
+
+    # map to grid coordinates
+    coords = np.array([
+        [primitive_grids[d].grid[i, 0] for d, i in enumerate(row)]
+        for row in idcs
+    ])
+    return Grid(coords, list(range(len(sizes))))
 
 
 def maxvol_selection(grid: Grid, function: Callable, dim2: int, **kwargs):
