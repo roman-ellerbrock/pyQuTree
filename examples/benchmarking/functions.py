@@ -87,7 +87,7 @@ def rosenbrock(x, a=1.0, b=100.0):
     return np.sum(b * (x[1:] - x[:-1]**2)**2 + (a - x[:-1])**2)
 
 
-def multi_well(x, seed=42):
+def multiwell(x, seed=42):
     """
     Linear combination of m student-t wells with negative coefficients and different heights.
 
@@ -143,7 +143,7 @@ FUNCTION_REGISTRY: Dict[str, Tuple[Callable, Tuple[float, float]]] = {
     "Schaffer":     (schaffer,     (-100.0,  100.0)),
     "Schwefel":     (schwefel,     (-500.0,  500.0)),
     "Rosenbrock":   (rosenbrock,   ( 0.0,    2.0)),
-    "MultiWell":    (multi_well,   (-5.0,    5.0)),
+    "Multiwell":    (multiwell,   (-5.0,    5.0)),
 }
 
 
@@ -160,7 +160,7 @@ F_OPT: Dict[str, float | None] = {
     "Schaffer":     0.0,
     "Schwefel":     0.0,
     "Rosenbrock":   0.0,
-    "MultiWell":    None,   # instance/seed dependent
+    "Multiwell":    None,   # instance/seed dependent
 }
 
 
