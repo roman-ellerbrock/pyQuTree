@@ -2,9 +2,10 @@
 
 Example:
 python benchmark.py \
---num_dimensions 10 --num_grid_points 11 --ranks 2 3 4 5 \
---num_sweeps 6 --seed 42 --num_experiments 100 \
---functions MultiWell --methods TRC MT TTOpt 
+--num_dimensions 7 --num_grid_points 5 --ranks 1 2 3 4 5 \
+--num_sweeps 6 --seed 42 --num_experiments 10 \
+--functions Ackley Alpine1 Brown Exponential Griewank Michalewicz Qing Rastrigin Schaffer \
+--methods TRC MT TTOpt
 """
 
 from __future__ import annotations
