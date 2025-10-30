@@ -5,9 +5,7 @@ from typing import Dict, Optional, List
 import os
 import numpy as np
 import pandas as pd
-
 import matplotlib.pyplot as plt
-from matplotlib.patches import Patch
 
 
 def _save(fig, path: str) -> None:
@@ -23,7 +21,8 @@ def _method_colors(methods: List[str]) -> Dict[str, str]:
     colors = (cycle.by_key().get("color", []) if cycle else [])
     if not colors:
         colors = [f"C{i}" for i in range(10)]
-    return {m: colors[i % len(colors)] for i, m in enumerate(sorted(methods))}
+    # preserve the incoming order
+    return {m: colors[i % len(colors)] for i, m in enumerate(methods)}
 
 
 def _slug(s: str) -> str:
@@ -72,69 +71,58 @@ def _plot_best_error_vs_calls(ax, best: pd.DataFrame, methods: list[str]) -> Non
                         textcoords="offset points", xytext=(5, 0),
                         fontsize=8, color=colors[m])
     ax.set_xscale("log")
-    y = best["error"].values
     ax.set_xlabel("Objective calls (best run)")
     ax.set_ylabel("Best error (best_f - f_opt)")
     ax.grid(True, which="both", alpha=0.3)
     ax.legend(title="Method")
 
 
-def _grouped_boxplot(ax, df: pd.DataFrame, ycol: str, ranks: list[int], methods: list[str],
-                     title: str, ylabel: str) -> None:
-    colors = _method_colors(methods)
-
-    M = len(methods)
-    group_width = 0.80                 # total horizontal span reserved per rank
-    box_w = group_width / max(M, 1)    # individual box width (tight, no overlap)
-
-    positions, data, facecolors = [], [], []
-
-    for r in ranks:
-        center = r
-        # left edge of the group; midpoint of the first box
-        start = center - group_width/2 + box_w/2
-        for j, m in enumerate(methods):
-            pos = start + j*box_w
-            vals = df[(df["Rank"] == r) & (df["Method"] == m)][ycol].dropna().values
-            if vals.size == 0:
-                vals = np.array([np.nan])
-            positions.append(pos)
-            data.append(vals)
-            facecolors.append(colors[m])
-
-    bp = ax.boxplot(
-        data,
-        positions=positions,
-        widths=box_w * 0.85,       # a touch narrower than the slot
-        patch_artist=True,
-        manage_ticks=False,
-        showfliers=False,
-        zorder=2,
+def _scatter_with_sem(ax, df: pd.DataFrame, ycol: str,
+                   ranks: list[int], methods: list[str],
+                   title: str, ylabel: str,
+                   logy: bool = False,
+                   offset: float = 0.12) -> None:
+    """
+    Plot mean ± SEM across experiments for each (Method, Rank) as jittered dots with error bars.
+    """
+    # aggregate over experiments
+    g = (
+        df.groupby(["Method", "Rank"])[ycol]
+          .agg(n="count",
+               mean="mean",
+               sem=lambda s: s.std(ddof=1) / np.sqrt(max(len(s), 1)))
+          .reset_index()
     )
 
-    for patch, c in zip(bp["boxes"], facecolors):
-        patch.set_facecolor(c)
-        patch.set_alpha(0.55)
-        patch.set_edgecolor("black")
-        patch.set_linewidth(1.1)
+    # consistent order & colors
+    methods_order = [m for m in methods if m in set(g["Method"])]
+    ranks_sorted = sorted(ranks)
+    colors = _method_colors(methods_order)
 
-    for key in ("medians", "whiskers", "caps"):
-        for artist in bp[key]:
-            artist.set_color("black")
-            artist.set_linewidth(1.0)
-            artist.set_zorder(3)
+    M = len(methods_order)
+    for j, m in enumerate(methods_order):
+        gi = g[g["Method"] == m].set_index("Rank").reindex(ranks_sorted)
+        y = gi["mean"].to_numpy()
+        yerr = gi["sem"].fillna(0.0).to_numpy()
+        x = np.asarray(ranks_sorted, dtype=float) + (j - (M - 1) / 2.0) * offset
 
-    # nice rank ticks centered at integers
-    ax.set_xticks(ranks)
+        ax.errorbar(
+            x, y, yerr=yerr,
+            fmt="-o", lw=1.0, ms=4, capsize=2,
+            color=colors[m], ecolor="black", alpha=0.9, label=m
+        )
+
     ax.set_xlabel("Rank")
     ax.set_ylabel(ylabel)
     ax.set_title(title)
+    ax.set_xticks(ranks_sorted)
+    if logy:
+        # guard against non-positive values on log scale
+        ymin = np.nanmin(np.where(yerr > 0, y - yerr, y))
+        if np.isfinite(ymin) and ymin > 0:
+            ax.set_yscale("log")
     ax.grid(True, alpha=0.3)
-
-    # legend
-    handles = [Patch(facecolor=colors[m], edgecolor="black", alpha=0.55, label=m) for m in methods]
-    ax.legend(handles=handles, title="Method")
-
+    ax.legend(title="Method")
 
 
 def make_plots(df_results: pd.DataFrame, f_opt_map: Dict[str, Optional[float]], outdir: str = "plots") -> None:
@@ -158,36 +146,42 @@ def make_plots(df_results: pd.DataFrame, f_opt_map: Dict[str, Optional[float]], 
         n_exp = int(dff["Experiment"].nunique() if "Experiment" in dff.columns
                     else dff.groupby(["Method", "Rank"]).size().max())
 
-        # 1) box: best function value by rank & method
+        # 1) dots: best function value by rank & method
         fig, ax = plt.subplots()
-        _grouped_boxplot(
+        _scatter_with_sem(
             ax, dff, ycol="best_f", ranks=ranks, methods=methods,
-            title=f"{func}: Best function value vs rank (box over experiments)",
+            title=f"{func}: Best function value vs rank (mean ± SEM)",
             ylabel="Best found f(x)",
+            logy=False,
         )
-        _save(fig, _fname(outdir, func, plot_type="box_best_f_vs_rank", n_exp=n_exp))
+        _save(fig, _fname(outdir, func, plot_type="dots_best_f_vs_rank", n_exp=n_exp))
 
-        # 2) box: objective calls by rank & method
+        # 2) dots: objective calls by rank & method (already dots)
         fig, ax = plt.subplots()
-        _grouped_boxplot(
+        _scatter_with_sem(
             ax, dff, ycol="Objective calls", ranks=ranks, methods=methods,
-            title=f"{func}: Objective calls vs rank (box over experiments)",
-            ylabel="Objective calls",
+            title=f"{func}: Objective calls vs rank (mean ± SEM)",
+            ylabel="Objective calls (mean ± SEM across experiments)",
+            logy=False,
         )
-        _save(fig, _fname(outdir, func, plot_type="box_calls_vs_rank", n_exp=n_exp))
+        _save(fig, _fname(outdir, func, plot_type="dots_calls_vs_rank", n_exp=n_exp))
 
-        # 3) box: best error by rank & method (if f_opt known)
+        # 3) dots: best error by rank & method (if f_opt known)
         if pd.notna(f_opt_map.get(func, np.nan)):
             fig, ax = plt.subplots()
-            _grouped_boxplot(
-                ax, dff, ycol="error", ranks=ranks, methods=methods,
-                title=f"{func}: Best error vs rank (box over experiments)",
-                ylabel="Best error (best_f - f_opt)",
-            )
+            # log y if dynamic range is wide and positive
+            use_logy = False
             vals = dff["error"].dropna().values
-            if vals.size > 0 and np.all(vals > 0) and (np.nanmax(vals) / np.nanmin(vals) > 10):
-                ax.set_yscale("log")
-            _save(fig, _fname(outdir, func, plot_type="box_error_vs_rank", n_exp=n_exp))
+            if vals.size > 0:
+                vmin, vmax = np.nanmin(vals), np.nanmax(vals)
+                use_logy = (vmin > 0) and (vmax / max(vmin, 1e-300) > 10)
+            _scatter_with_sem(
+                ax, dff, ycol="error", ranks=ranks, methods=methods,
+                title=f"{func}: Best error vs rank (mean ± SEM)",
+                ylabel="Best error (best_f - f_opt)",
+                logy=use_logy,
+            )
+            _save(fig, _fname(outdir, func, plot_type="dots_error_vs_rank", n_exp=n_exp))
 
         # 4) Best-only summary: error vs objective calls (one point per method×rank)
         if pd.notna(f_opt_map.get(func, np.nan)):
@@ -195,7 +189,5 @@ def make_plots(df_results: pd.DataFrame, f_opt_map: Dict[str, Optional[float]], 
             if not best.empty:
                 fig, ax = plt.subplots()
                 _plot_best_error_vs_calls(ax, best, methods=methods)
-                ax.set_title(
-                    f"{func}: Best error vs calls (annotated by rank and method)"
-                )
+                ax.set_title(f"{func}: Best error vs calls (annotated by rank and method)")
                 _save(fig, _fname(outdir, func, plot_type="best_error_vs_calls", n_exp=n_exp))
