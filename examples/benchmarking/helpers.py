@@ -89,8 +89,8 @@ def run_de(func: Callable, bounds: List[Tuple[float, float]],
            num_grid_points: int, rank: int, num_sweeps: int, seed: int = 42):
     """SciPy Differential Evolution baseline (global). Returns (calls, best_f_raw, obj)."""
     _seed_all(seed)
-    D = _dim(bounds)
-    budget = _budget(num_grid_points, rank, num_sweeps, D)
+    num_dims = _dim(bounds)
+    budget = _budget(num_grid_points, rank, num_sweeps, num_dims)
 
     # Use same transform as TRC/MT: score t = -exp(-f)
     obj = Objective(func, lambda x: -np.exp(-x))
@@ -124,8 +124,8 @@ def run_da(func: Callable, bounds: List[Tuple[float, float]],
            num_grid_points: int, rank: int, num_sweeps: int, seed: int = 42):
     """SciPy Dual Annealing baseline (global SA). Returns (calls, best_f_raw, obj)."""
     _seed_all(seed)
-    D = _dim(bounds)
-    budget = _budget(num_grid_points, rank, num_sweeps, D)
+    num_dims = _dim(bounds)
+    budget = _budget(num_grid_points, rank, num_sweeps, num_dims)
 
     obj = Objective(func, lambda x: -np.exp(-x))
 
