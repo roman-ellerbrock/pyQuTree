@@ -12,7 +12,7 @@ from __future__ import annotations
 import argparse
 
 from functions import FUNCTION_REGISTRY, F_OPT, get_tests
-from runner import compare_all
+from runner import compare_all, save_best_errors_csv
 from plotting import make_plots
 
 
@@ -64,7 +64,7 @@ def main() -> None:
         methods=args.methods,
     )
     df_results.to_csv("results.csv", index=False)
-    print(df_results)
+    save_best_errors_csv(df_results, F_OPT, path="best_errors.csv")
     print("Saved results")
     make_plots(df_results, F_OPT)
 
