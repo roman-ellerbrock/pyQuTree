@@ -110,7 +110,7 @@ def run_de(func: Callable, bounds: List[Tuple[float, float]],
         return t
 
     popsize = 10
-    maxiter = max(1, budget // max(popsize * D, 1))
+    maxiter = max(1, budget // max(popsize * num_dims, 1))
     _ = differential_evolution(
         f, bounds, seed=seed, popsize=popsize, maxiter=maxiter,
         polish=False, updating="deferred", workers=1, tol=0.0
