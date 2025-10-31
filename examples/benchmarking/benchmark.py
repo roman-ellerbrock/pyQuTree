@@ -4,14 +4,14 @@ Example:
 python benchmark.py \
 --num_dimensions 7 --num_grid_points 5 --ranks 1 2 3 4 5 \
 --num_sweeps 6 --seed 42 --num_experiments 10 \
---functions Ackley Alpine1 Brown Exponential Griewank Michalewicz Qing Rastrigin Schaffer \
---methods TRC MT TTOpt
+--functions Ackley Alpine1 Brown Exponential Griewank Qing Rastrigin Schaffer \
+--methods TRC MT TTOpt DA DE
 """
 
 from __future__ import annotations
 import argparse
 
-from functions import FUNCTION_REGISTRY, F_OPT, get_tests
+from functions import FUNCTION_REGISTRY, F_OPT, get_tests, resolve_f_opt_map
 from runner import compare_all, save_best_errors_csv
 from plotting import make_plots
 
@@ -64,9 +64,15 @@ def main() -> None:
         methods=args.methods,
     )
     df_results.to_csv("results.csv", index=False)
-    save_best_errors_csv(df_results, F_OPT, path="best_errors.csv")
+    print(df_results)
     print("Saved results")
-    make_plots(df_results, F_OPT)
+
+    # dimension-aware f_opt map (fills Michalewicz for D=5 or D=10)
+    f_opt_map = resolve_f_opt_map(F_OPT, args.num_dimensions)
+
+    # Plots use the resolved map
+    make_plots(df_results, f_opt_map)
+    save_best_errors_csv(df_results, f_opt_map, path="best_errors.csv", sci_digits=1)
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 """Benchmarking functions and some corresponding helpers for optimization algorithms."""
 
 from __future__ import annotations
-from typing import Callable, Dict, List, Tuple
+from typing import Callable, Dict, List, Tuple, Optional
 import math
 import numpy as np
 
@@ -147,6 +147,13 @@ FUNCTION_REGISTRY: Dict[str, Tuple[Callable, Tuple[float, float]]] = {
 }
 
 
+# Known global minima for Michalewicz (m=10) at specific dimensions
+_MICHALEWICZ_KNOWN = {
+    5:  -4.687656,   # ≈ value for num_dims=5
+    10: -9.66015,    # ≈ value for num_dims=10
+}
+
+
 # Known global minima (value only). Unknown/depends on D -> None.
 F_OPT: Dict[str, float | None] = {
     "Ackley":       0.0,
@@ -162,6 +169,17 @@ F_OPT: Dict[str, float | None] = {
     "Rosenbrock":   0.0,
     "Multiwell":    None,   # instance/seed dependent
 }
+
+
+def resolve_f_opt_map(base: Dict[str, Optional[float]], num_dimensions: int) -> Dict[str, Optional[float]]:
+    """
+    Return a copy of base F_OPT with Michalewicz filled for D in {5,10} (m=10),
+    otherwise leave it as None.
+    """
+    out = dict(base)
+    if "Michalewicz" in out:
+        out["Michalewicz"] = _MICHALEWICZ_KNOWN.get(num_dimensions, None)
+    return out
 
 
 def get_tests(num_variables: int, names: List[str]):
