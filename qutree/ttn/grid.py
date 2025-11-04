@@ -134,11 +134,43 @@ def transform_node_grid(G, q_to_x):
         G.nodes[node]['grid'] = G.nodes[node]['grid'].transform(q_to_x)
     return G
 
-def regularized_inverse(A, lambda_reg):
+def regularized_inverse(A: np.ndarray, lambda_reg: float, eps: float = 1e-15) -> np.ndarray:
+    """
+    Tikhonov-regularized inverse via SVD:
+      sigma_inv = s / (s^2 + alpha),  with  alpha = (lambda_eff * s_max)^2
+    where lambda_eff = max(lambda_reg, eps). Denominator is clamped to >= eps.
+    This prevents divide-by-zero/overflow and stays stable even if s_max <= 0.
+    """
     U, sigma, VT = np.linalg.svd(A, full_matrices=False)
-    sigma_inv = np.array([1/s if s/sigma[0] > lambda_reg else lambda_reg for s in sigma])
-    A_inv = VT.T @ np.diag(sigma_inv) @ U.T
-    return A_inv
+    # Ensure float64 for stability
+    U = U.astype(np.float64, copy=False)
+    sigma = sigma.astype(np.float64, copy=False)
+    VT = VT.astype(np.float64, copy=False)
+
+    if sigma.size == 0:
+        # Empty spectrum: return shape-consistent zero inverse
+        return np.zeros_like(A.T, dtype=np.float64)
+
+    s_max = float(np.max(sigma))  # safer than sigma[0] if SVD ordering ever changes
+    # Enforce strictly positive regularization
+    lam = float(lambda_reg)
+    if not np.isfinite(lam) or lam <= 0.0:
+        lam = eps
+
+    # If s_max is non-positive or non-finite, still produce a positive alpha
+    if not np.isfinite(s_max) or s_max <= 0.0:
+        alpha = lam * lam
+    else:
+        alpha = (lam * s_max) ** 2
+
+    # Denominator, safely clamped away from zero
+    denom = sigma * sigma + alpha
+    denom = np.where(denom <= eps, eps, denom)
+
+    sigma_inv = sigma / denom  # guaranteed finite
+
+    # A_inv = V * diag(sigma_inv) * U^T
+    return (VT.T * sigma_inv) @ U.T
 
 def maxvol_grids(A, G, edge):
     pre = pre_edges(G, edge, remove_flipped=True)
