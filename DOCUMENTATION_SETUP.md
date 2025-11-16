@@ -105,14 +105,14 @@ The documentation is configured to build automatically on ReadTheDocs when you:
 2. Sign in with your GitHub account
 3. Import the `pyqutree` repository
 4. The build will start automatically
-5. Documentation will be available at: https://pyqutree.readthedocs.io
+5. Documentation is now live at: **https://pyqutree-ttn.readthedocs.io**
 
 ### Badge for README
 
-Add this badge to your README.md:
+The following badge has been added to README.md:
 
 ```markdown
-[![Documentation Status](https://readthedocs.org/projects/pyqutree/badge/?version=latest)](https://pyqutree.readthedocs.io/en/latest/?badge=latest)
+[![Documentation Status](https://readthedocs.org/projects/pyqutree-ttn/badge/?version=latest)](https://pyqutree-ttn.readthedocs.io/en/latest/?badge=latest)
 ```
 
 ## Documentation Structure
@@ -133,21 +133,16 @@ docs/
 └── README.md            # Build instructions
 ```
 
-## What's Next
+## Documentation is Live! ✓
 
-### To Activate ReadTheDocs
+The documentation is now hosted at: **https://pyqutree-ttn.readthedocs.io**
 
-1. Commit and push all documentation files:
-   ```bash
-   git add .readthedocs.yml docs/ pyproject.toml poetry.lock
-   git commit -m "Add comprehensive Sphinx documentation with ReadTheDocs support"
-   git push
-   ```
-
-2. Set up the project on ReadTheDocs.org
-
-3. The documentation will build automatically and be available at:
-   https://pyqutree.readthedocs.io
+Key pages:
+- [Home](https://pyqutree-ttn.readthedocs.io)
+- [Quick Start](https://pyqutree-ttn.readthedocs.io/en/latest/quickstart.html)
+- [TTNOpt Guide](https://pyqutree-ttn.readthedocs.io/en/latest/usage/ttnopt.html)
+- [Tree Structures](https://pyqutree-ttn.readthedocs.io/en/latest/usage/tree_structures.html)
+- [API Reference](https://pyqutree-ttn.readthedocs.io/en/latest/api/index.html)
 
 ### Updating Documentation
 

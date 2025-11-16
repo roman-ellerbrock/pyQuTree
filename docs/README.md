@@ -44,7 +44,7 @@ make help      # See all available formats
 ## ReadTheDocs
 
 The documentation is automatically built and hosted on ReadTheDocs at:
-https://pyqutree.readthedocs.io
+https://pyqutree-ttn.readthedocs.io
 
 The configuration is in `.readthedocs.yml` in the project root.
 

@@ -30,7 +30,7 @@ packages = [{include = "qutree"}]
 "Homepage" = "https://github.com/roman-ellerbrock/pyqutree"
 "Repository" = "https://github.com/roman-ellerbrock/pyqutree"
 "Bug Tracker" = "https://github.com/roman-ellerbrock/pyqutree/issues"
-"Documentation" = "https://pyqutree.readthedocs.io"
+"Documentation" = "https://pyqutree-ttn.readthedocs.io"
 "Paper" = "https://doi.org/10.1063/5.0180233"
 
 [tool.poetry.dependencies]

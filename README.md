@@ -1,7 +1,14 @@
 # pyQuTree
 
+[![Documentation Status](https://readthedocs.org/projects/pyqutree-ttn/badge/?version=latest)](https://pyqutree-ttn.readthedocs.io/en/latest/?badge=latest)
+[![PyPI version](https://badge.fury.io/py/pyqutree.svg)](https://badge.fury.io/py/pyqutree)
+
 A smaller python version of the Tree Tensor Network library Qutree[^1]
 currently centered around optimization.
+
+## Documentation
+
+Full documentation is available at [https://pyqutree-ttn.readthedocs.io](https://pyqutree-ttn.readthedocs.io)
 
 ## Installation
 
@@ -47,7 +54,13 @@ print(objective)
 dataframe = objective.logger.df
 print(dataframe)
 ```
-More details can be found in `examples/ttopt_example.ipynb`.
+
+For detailed tutorials and usage examples, see the [documentation](https://pyqutree-ttn.readthedocs.io):
+- [Quick Start Guide](https://pyqutree-ttn.readthedocs.io/en/latest/quickstart.html)
+- [TTNOpt Optimization](https://pyqutree-ttn.readthedocs.io/en/latest/usage/ttnopt.html)
+- [Tree Structures Guide](https://pyqutree-ttn.readthedocs.io/en/latest/usage/tree_structures.html)
+
+More examples can be found in `examples/ttopt_example.ipynb`.
 
 If Qutree was useful in your work, please consider citing the paper[^1].
 
