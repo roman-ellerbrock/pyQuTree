@@ -3,14 +3,39 @@
 A smaller python version of the Tree Tensor Network library Qutree[^1]
 currently centered around optimization.
 
-Install pyQutree via pip using
+## Installation
+
+Install pyQuTree from PyPI:
+```bash
+pip install pyqutree
+```
+
+Or install the latest development version from GitHub:
 ```bash
 pip install git+https://github.com/roman-ellerbrock/pyQuTree.git
 ```
-or create a conda environment via
+
+For developers, create a conda environment via:
 ```bash
 conda env {create, update} --file environment.yml
 conda activate qutree
+```
+
+### Optional Dependencies
+
+Install with GPU support (PyTorch):
+```bash
+pip install pyqutree[gpu]
+```
+
+Install with chemistry tools (ASE):
+```bash
+pip install pyqutree[chem]
+```
+
+Install all optional dependencies:
+```bash
+pip install pyqutree[all]
 ```
 
 You can use a tree tensor network version of cross interpolation[^2] via

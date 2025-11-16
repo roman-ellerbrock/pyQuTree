@@ -1,3 +1,5 @@
+__version__ = "0.1.0"
+
 from .matrix_factorizations import *
 from .ttn.grid import *
 from .ttn.network import *

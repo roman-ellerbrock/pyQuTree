@@ -3,7 +3,7 @@ requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
-name = "qutree"
+name = "pyqutree"
 version = "0.1.0"
 description = "QuTree: A tree tensor network package"
 authors = ["Roman Ellerbrock <romanellerbrock@gmail.com>"]
