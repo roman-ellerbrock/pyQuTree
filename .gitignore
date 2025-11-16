@@ -6,6 +6,7 @@ prototypes
 __pycache__/
 *.py[cod]
 *$py.class
+untracked/
 
 ttnopt.html
 ttnopt_3D.mov

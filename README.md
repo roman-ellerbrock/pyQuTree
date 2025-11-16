@@ -21,22 +21,7 @@ conda env {create, update} --file environment.yml
 conda activate qutree
 ```
 
-### Optional Dependencies
-
-Install with GPU support (PyTorch):
-```bash
-pip install pyqutree[gpu]
-```
-
-Install with chemistry tools (ASE):
-```bash
-pip install pyqutree[chem]
-```
-
-Install all optional dependencies:
-```bash
-pip install pyqutree[all]
-```
+## Usage
 
 You can use a tree tensor network version of cross interpolation[^2] via
 ```python
