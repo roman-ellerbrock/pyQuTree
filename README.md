@@ -1,5 +1,6 @@
 # pyQuTree
 
+[![Tests](https://github.com/roman-ellerbrock/pyQuTree/actions/workflows/tests.yml/badge.svg)](https://github.com/roman-ellerbrock/pyQuTree/actions/workflows/tests.yml)
 [![Documentation Status](https://readthedocs.org/projects/pyqutree-ttn/badge/?version=latest)](https://pyqutree-ttn.readthedocs.io/en/latest/?badge=latest)
 [![PyPI version](https://badge.fury.io/py/pyqutree.svg)](https://badge.fury.io/py/pyqutree)
 

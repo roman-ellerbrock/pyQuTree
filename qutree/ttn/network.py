@@ -313,4 +313,10 @@ def balanced_tree(f, r = 2, N = 8):
             other = G.edges[flip(edge)]['r']
             G.edges[edge]['r'] = min(r, other)
 
+    # add coordinates to leaf edges (in sorted order to match tn_grid expectations)
+    coord = 0
+    for edge in sorted(up_leaves(G)):
+        G.edges[edge]['coordinate'] = coord
+        coord += 1
+
     return G 
