@@ -1,10 +1,42 @@
 Quick Start
 ===========
 
-Basic Optimization Example
----------------------------
+High-Level Interface (Recommended)
+-----------------------------------
 
-Here's a minimal example of optimizing a 3D function using tensor train networks:
+The easiest way to get started is with the convenience interface:
+
+.. code-block:: python
+
+    from qutree import optimize_function
+
+    # Define your function with named parameters
+    def rosenbrock(x, y):
+        return (1 - x)**2 + 100*(y - x**2)**2
+
+    # Define parameter bounds
+    bounds = {'x': (-2, 2), 'y': (-1, 3)}
+
+    # Optimize!
+    result = optimize_function(rosenbrock, bounds)
+
+    print(f"Optimal x={result['x']['x']:.3f}, y={result['x']['y']:.3f}")
+    print(f"Minimum value: {result['fun']:.6f}")
+    print(f"Function evaluations: {result['n_calls']}")
+
+That's it! The convenience interface handles all the tensor network details for you.
+
+See :doc:`usage/convenience_interface` for more examples and advanced features like:
+
+* Per-parameter grid points
+* Warm-start optimization
+* Different function signatures
+* Hyperparameter tuning
+
+Low-Level Interface
+-------------------
+
+For more control over the tensor network structure, use the low-level API:
 
 .. code-block:: python
 
@@ -58,6 +90,7 @@ You can visualize the tensor network structure:
 Next Steps
 ----------
 
+* Start with the :doc:`Convenience Interface <usage/convenience_interface>` for easy optimization
 * Learn about different :doc:`tree structures <usage/tree_structures>`
-* Explore :doc:`TTNOpt optimization <usage/ttnopt>` in detail
+* Explore :doc:`TTNOpt optimization <usage/ttnopt>` in detail for low-level control
 * Check the :doc:`API reference <api/index>`
