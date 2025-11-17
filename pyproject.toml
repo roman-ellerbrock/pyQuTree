@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "pyqutree"
-version = "0.1.3"
+version = "0.1.4"
 description = "QuTree: A tree tensor network package"
 authors = ["Roman Ellerbrock <romanellerbrock@gmail.com>"]
 license = "BSD-3-Clause"

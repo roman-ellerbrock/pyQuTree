@@ -31,7 +31,30 @@ conda activate qutree
 
 ## Usage
 
-You can use a tree tensor network version of cross interpolation[^2] via
+### High-Level Interface
+
+For quick optimization of arbitrary functions, use the convenience interface:
+
+```python
+from qutree import optimize_function
+
+# Define your function with named parameters
+def rosenbrock(x, y):
+    return (1 - x)**2 + 100*(y - x**2)**2
+
+# Define parameter bounds
+bounds = {'x': (-2, 2), 'y': (-1, 3)}
+
+# Optimize!
+result = optimize_function(rosenbrock, bounds)
+print(f"Optimal x={result['x']['x']:.3f}, y={result['x']['y']:.3f}")
+print(f"Minimum value: {result['fun']:.6f}")
+```
+
+### Low-Level Interface
+
+You can also use the low-level tree tensor network API directly:
+
 ```python
 from qutree import *
 
@@ -44,7 +67,7 @@ N, r, f, nsweep = 21, 4, 3, 6
 objective = Objective(V)
 
 # create a tensor network, e.g. a balanced tree
-tn = balanced_tree(f, r, N) 
+tn = balanced_tree(f, r, N)
 
 # Create a primitive grid and tensor network grid
 primitive_grid = [linspace(-1., 3., N)] * f

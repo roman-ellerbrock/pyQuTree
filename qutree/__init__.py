@@ -1,4 +1,4 @@
-__version__ = "0.1.3"
+__version__ = "0.1.4"
 
 from .matrix_factorizations import *
 from .ttn.grid import *
@@ -8,3 +8,4 @@ from .ttn.tensor_network import *
 from .ttn.ttnopt import *
 from .internal_coordinates import *
 from .plot import *
+from .convenience import optimize_function, minimize, FunctionWrapper
