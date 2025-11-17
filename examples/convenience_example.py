@@ -164,6 +164,48 @@ def example_5_automatic_method():
     print()
 
 
+def example_6_per_parameter_grid():
+    """
+    Example 6: Using different grid resolutions for different parameters.
+
+    Demonstrates per-parameter grid points for more efficient optimization.
+    """
+    print("=" * 70)
+    print("Example 6: Per-Parameter Grid Points")
+    print("=" * 70)
+
+    def anisotropic(x, y, z):
+        """Function with different sensitivities in different directions."""
+        # y has a narrow valley, needs finer resolution
+        return (x - 1)**2 + 100*(y - 0.5)**2 + (z + 1)**2
+
+    bounds = {'x': (-2, 3), 'y': (-1, 2), 'z': (-3, 1)}
+
+    # Use different grid resolutions for different parameters
+    # Fine grid (31 points) for y (narrow valley)
+    # Coarse grid (11 points) for x and z (wider valleys)
+    grid_points = {
+        'x': 11,  # Coarse grid
+        'y': 31,  # Fine grid for narrow valley
+        'z': 11   # Coarse grid
+    }
+
+    result = optimize_function(
+        anisotropic,
+        bounds,
+        grid_points=grid_points,
+        n_sweeps=3,
+        bond_dim=4,
+        verbose=True
+    )
+
+    print(f"\nResult: x={result['x']['x']:.3f}, y={result['x']['y']:.3f}, z={result['x']['z']:.3f}")
+    print(f"(True minimum is at x=1, y=0.5, z=-1)")
+    print(f"Using per-parameter grids saved {(31*31*31) - (11*31*11):,} function evaluations")
+    print(f"vs. uniform 31x31x31 grid")
+    print()
+
+
 if __name__ == '__main__':
     # Run all examples
     example_1_rosenbrock()
@@ -171,6 +213,7 @@ if __name__ == '__main__':
     example_3_warm_start()
     example_4_minimize_interface()
     example_5_automatic_method()
+    example_6_per_parameter_grid()
 
     print("=" * 70)
     print("All examples completed!")

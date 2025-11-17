@@ -70,7 +70,7 @@ def optimize_function(
     method: str = 'auto',
     n_sweeps: int = 3,
     bond_dim: int = 4,
-    grid_points: int = 21,
+    grid_points: Union[int, Dict[str, int]] = 21,
     start_points: Optional[Dict[str, List[float]]] = None,
     verbose: bool = True
 ) -> Dict:
@@ -99,8 +99,11 @@ def optimize_function(
         Number of optimization sweeps. More sweeps = better convergence.
     bond_dim : int, default=4
         Bond dimension r. Larger values = more accurate but slower.
-    grid_points : int, default=21
-        Number of grid points per dimension. More points = finer resolution.
+    grid_points : int or dict, default=21
+        Number of grid points per dimension. Can be:
+        - int: Same number of points for all dimensions
+        - dict: Per-parameter grid points, e.g. {'x': 21, 'y': 31, 'z': 11}
+        More points = finer resolution but slower.
     start_points : dict, optional
         Initial guess points for warm-start. Format:
         {'x': [x1, x2, ...], 'y': [y1, y2, ...], ...}
@@ -130,6 +133,12 @@ def optimize_function(
     >>> print(f"Optimal x={result['x']['x']:.3f}, y={result['x']['y']:.3f}")
     >>> print(f"Minimum value: {result['fun']:.6f}")
 
+    With per-parameter grid points:
+
+    >>> # Use finer grid for y (narrow valley in Rosenbrock)
+    >>> grid_pts = {'x': 21, 'y': 41}
+    >>> result = optimize_function(rosenbrock, bounds, grid_points=grid_pts)
+
     With initial guess:
 
     >>> start = {'x': [0.5, 1.0, 1.5], 'y': [0.5, 1.0, 1.5]}
@@ -158,27 +167,44 @@ def optimize_function(
     else:
         raise ValueError(f"Unknown method '{method}'. Use 'auto', 'tensor_train', or 'balanced_tree'.")
 
+    # Handle grid_points: convert to dict if int, or validate dict
+    if isinstance(grid_points, int):
+        grid_points_dict = {param: grid_points for param in param_names}
+    elif isinstance(grid_points, dict):
+        # Validate all parameters have grid points specified
+        for param in param_names:
+            if param not in grid_points:
+                raise ValueError(f"grid_points dict missing parameter '{param}'")
+        grid_points_dict = grid_points
+    else:
+        raise ValueError("grid_points must be int or dict")
+
     if verbose:
         method_name = "Balanced Tree" if use_balanced_tree else "Tensor Train"
         print(f"Optimizing {n_params}D function using {method_name}")
         print(f"Parameters: {param_names}")
-        print(f"Settings: sweeps={n_sweeps}, bond_dim={bond_dim}, grid_points={grid_points}")
+        if isinstance(grid_points, dict):
+            grid_str = ", ".join(f"{p}:{grid_points_dict[p]}" for p in param_names)
+            print(f"Settings: sweeps={n_sweeps}, bond_dim={bond_dim}, grid_points={{{grid_str}}}")
+        else:
+            print(f"Settings: sweeps={n_sweeps}, bond_dim={bond_dim}, grid_points={grid_points}")
 
     # Create wrapper for the function
     wrapper = FunctionWrapper(func, param_names)
     objective = Objective(wrapper)
 
-    # Create tensor network
-    if use_balanced_tree:
-        G = balanced_tree(n_params, bond_dim, grid_points)
-    else:
-        G = tensor_train_graph(n_params, bond_dim, grid_points)
-
-    # Create primitive grids from bounds
+    # Create primitive grids from bounds with per-parameter grid points
     primitive_grid = []
     for param in param_names:
         min_val, max_val = bounds[param]
-        primitive_grid.append(np.linspace(min_val, max_val, num=grid_points))
+        n_points = grid_points_dict[param]
+        primitive_grid.append(np.linspace(min_val, max_val, num=n_points))
+
+    # Create tensor network - pass primitive_grid so it knows the per-dimension sizes
+    if use_balanced_tree:
+        G = balanced_tree(n_params, bond_dim, primitive_grid)
+    else:
+        G = tensor_train_graph(n_params, bond_dim, primitive_grid)
 
     # Convert start_points if provided
     start_grid = None

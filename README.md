@@ -51,6 +51,47 @@ print(f"Optimal x={result['x']['x']:.3f}, y={result['x']['y']:.3f}")
 print(f"Minimum value: {result['fun']:.6f}")
 ```
 
+**Practical Example - Hyperparameter Tuning:**
+
+```python
+from qutree import optimize_function
+import numpy as np
+
+# Define your objective (e.g., validation error as a function of hyperparameters)
+def model_error(learning_rate, batch_size, dropout_rate, l2_reg):
+    """Simulate model validation error (replace with your actual model training)."""
+    # This is a placeholder - replace with your actual model training/validation
+    error = (learning_rate - 0.001)**2 + (batch_size - 64)**2 / 1000
+    error += (dropout_rate - 0.3)**2 + (l2_reg - 0.01)**2
+    return error
+
+# Define hyperparameter search space
+bounds = {
+    'learning_rate': (1e-5, 1e-1),
+    'batch_size': (16, 128),
+    'dropout_rate': (0.0, 0.5),
+    'l2_reg': (1e-6, 1e-1)
+}
+
+# Use different grid resolutions for different parameters
+# (finer grid for parameters you want to optimize more precisely)
+grid_points = {
+    'learning_rate': 25,  # Fine grid for learning rate
+    'batch_size': 15,     # Coarse grid for batch size
+    'dropout_rate': 11,   # Coarse grid for dropout
+    'l2_reg': 21          # Medium grid for regularization
+}
+
+# Optimize hyperparameters
+result = optimize_function(model_error, bounds, grid_points=grid_points, n_sweeps=5)
+
+print("Best hyperparameters:")
+for param, value in result['x'].items():
+    print(f"  {param}: {value:.6f}")
+print(f"Best validation error: {result['fun']:.6f}")
+print(f"Function evaluations: {result['n_calls']}")
+```
+
 ### Low-Level Interface
 
 You can also use the low-level tree tensor network API directly:

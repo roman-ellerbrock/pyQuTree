@@ -280,6 +280,17 @@ def balanced_tree(f, r = 2, N = 8):
     Node: odd f is implemented manually:
           avoids adding unnecessary node by added code.
           See # odd-leaf tag
+
+    Parameters
+    ----------
+    f : int
+        Number of dimensions
+    r : int
+        Bond dimension
+    N : int or list of int
+        Number of grid points. Can be:
+        - int: Same number of points for all dimensions
+        - list of int: Per-dimension grid points
     """
     G = nx.DiGraph()
 
@@ -297,26 +308,34 @@ def balanced_tree(f, r = 2, N = 8):
 #        if edge[0] < 0:
 #            continue # special case for odd number of leaves
         G.add_edge(edge[1], edge[0])
-    
-    # add ranks
+
+    # Handle N as int or list
+    if isinstance(N, int):
+        Ns = [N] * f
+    else:
+        Ns = []
+        for grid in N:
+            Ns.append(len(grid))
+
+    # add coordinates to leaf edges first (in sorted order to match tn_grid expectations)
+    # and set their ranks
+    coord = 0
+    for edge in sorted(up_leaves(G)):
+        G.edges[edge]['coordinate'] = coord
+        G.edges[edge]['r'] = Ns[coord]
+        coord += 1
+
+    # add ranks for non-leaf edges
     for edge in sweep(G):
         if not is_leaf(edge, G):
             pre = pre_edges(G, edge, True)
             rmax = np.prod(collect(G, pre, 'r'))
             G.edges[edge]['r'] = min(r, rmax)
-        else:
-            G.edges[edge]['r'] = N
 
     for edge in sweep(G):
         if not is_leaf(edge, G):
             r = G.edges[edge]['r']
             other = G.edges[flip(edge)]['r']
             G.edges[edge]['r'] = min(r, other)
-
-    # add coordinates to leaf edges (in sorted order to match tn_grid expectations)
-    coord = 0
-    for edge in sorted(up_leaves(G)):
-        G.edges[edge]['coordinate'] = coord
-        coord += 1
 
     return G 
